@@ -63,3 +63,7 @@ npm run dev
 ```
 
 Verify the connection at [http://localhost:5000/api/health/database](http://localhost:5000/api/health/database).
+
+### Current database schema
+
+The core entities are `User`, `Department`, `Address`, and `SystemHealth`. Users support the `CITIZEN`, `EMPLOYEE`, and `ADMIN` roles.
