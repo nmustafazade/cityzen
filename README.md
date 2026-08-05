@@ -25,6 +25,8 @@ Smart City Citizen & Municipality Platform.
 - TypeScript
 - dotenv
 - cors
+- MySQL
+- Prisma ORM
 
 ## Run the web app
 
@@ -46,3 +48,18 @@ npm run dev
 ```
 
 The API runs at [http://localhost:5000](http://localhost:5000). Check its health at [http://localhost:5000/api/health](http://localhost:5000/api/health).
+
+## Database setup
+
+MySQL is required. Create a local database named `cityzen`, then configure and migrate it:
+
+```bash
+cp server/.env.example server/.env
+# Update DATABASE_URL in server/.env with your local MySQL credentials.
+cd server
+npm install
+npm run prisma:migrate -- --name init
+npm run dev
+```
+
+Verify the connection at [http://localhost:5000/api/health/database](http://localhost:5000/api/health/database).
