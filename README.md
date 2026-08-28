@@ -81,3 +81,14 @@ Send the token to protected routes with:
 ```text
 Authorization: Bearer <token>
 ```
+
+## Issue reporting
+
+- `GET /api/report-categories` — list active categories
+- `POST /api/reports` — create a citizen report
+- `GET /api/reports/my` — list the citizen's reports
+- `GET /api/reports/:id` — view an authorized report
+- `PATCH /api/reports/:id/cancel` — cancel an eligible citizen report
+- `GET /api/reports` — employee/admin report list
+- `PATCH /api/reports/:id/status` — employee/admin status update
+- `PATCH /api/reports/:id/assign` — employee/admin assignment

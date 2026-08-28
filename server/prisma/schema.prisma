@@ -13,22 +13,42 @@ enum UserRole {
   ADMIN
 }
 
+enum ReportStatus {
+  SUBMITTED
+  UNDER_REVIEW
+  ASSIGNED
+  IN_PROGRESS
+  RESOLVED
+  REJECTED
+  CANCELLED
+}
+
+enum ReportPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
 model User {
-  id              Int         @id @default(autoincrement())
-  firstName       String
-  lastName        String
-  email           String      @unique
-  passwordHash    String
-  role            UserRole    @default(CITIZEN)
-  phone           String?
-  profileImageUrl String?
-  isActive        Boolean     @default(true)
-  isEmailVerified Boolean     @default(false)
-  departmentId    Int?
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
-  department      Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
-  addresses       Address[]
+  id               Int                   @id @default(autoincrement())
+  firstName        String
+  lastName         String
+  email            String                @unique
+  passwordHash     String
+  role             UserRole              @default(CITIZEN)
+  phone            String?
+  profileImageUrl  String?
+  isActive         Boolean               @default(true)
+  isEmailVerified  Boolean               @default(false)
+  departmentId     Int?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  department       Department?           @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  addresses        Address[]
+  submittedReports Report[]              @relation("CitizenReports")
+  assignedReports  Report[]              @relation("AssignedEmployeeReports")
+  reportChanges    ReportStatusHistory[] @relation("ReportStatusChangedBy")
 
   @@index([role])
   @@index([departmentId])
@@ -42,6 +62,7 @@ model Department {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   employees   User[]
+  reports     Report[]
 }
 
 model Address {
@@ -71,4 +92,71 @@ model SystemHealth {
   value     String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model ReportCategory {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  description String?
+  icon        String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  reports     Report[]
+}
+
+model Report {
+  id                 Int                   @id @default(autoincrement())
+  title              String
+  description        String                @db.Text
+  status             ReportStatus          @default(SUBMITTED)
+  priority           ReportPriority        @default(MEDIUM)
+  addressText        String?
+  latitude           Decimal?              @db.Decimal(10, 7)
+  longitude          Decimal?              @db.Decimal(10, 7)
+  citizenId          Int
+  categoryId         Int
+  departmentId       Int?
+  assignedEmployeeId Int?
+  resolvedAt         DateTime?
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+  citizen            User                  @relation("CitizenReports", fields: [citizenId], references: [id], onDelete: Restrict)
+  category           ReportCategory        @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  department         Department?           @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  assignedEmployee   User?                 @relation("AssignedEmployeeReports", fields: [assignedEmployeeId], references: [id], onDelete: SetNull)
+  images             ReportImage[]
+  statusHistory      ReportStatusHistory[]
+
+  @@index([citizenId, createdAt])
+  @@index([categoryId])
+  @@index([departmentId])
+  @@index([assignedEmployeeId])
+  @@index([status, createdAt])
+  @@index([priority])
+}
+
+model ReportImage {
+  id        Int      @id @default(autoincrement())
+  reportId  Int
+  imageUrl  String
+  createdAt DateTime @default(now())
+  report    Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@index([reportId])
+}
+
+model ReportStatusHistory {
+  id          Int           @id @default(autoincrement())
+  reportId    Int
+  oldStatus   ReportStatus?
+  newStatus   ReportStatus
+  changedById Int
+  note        String?
+  createdAt   DateTime      @default(now())
+  report      Report        @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  changedBy   User          @relation("ReportStatusChangedBy", fields: [changedById], references: [id], onDelete: Restrict)
+
+  @@index([reportId, createdAt])
+  @@index([changedById])
 }
