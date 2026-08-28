@@ -33,10 +33,17 @@ Smart City Citizen & Municipality Platform.
 ```bash
 cd web
 npm install
+cp .env.example .env.local
 npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
+
+The web app requires:
+
+```dotenv
+NEXT_PUBLIC_API_URL=http://localhost:5051
+```
 
 ## Run the backend
 
