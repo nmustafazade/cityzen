@@ -67,3 +67,17 @@ Verify the connection at [http://localhost:5000/api/health/database](http://loca
 ### Current database schema
 
 The core entities are `User`, `Department`, `Address`, and `SystemHealth`. Users support the `CITIZEN`, `EMPLOYEE`, and `ADMIN` roles.
+
+## Authentication
+
+Set `JWT_SECRET` and `JWT_EXPIRES_IN` in `server/.env`. Available endpoints:
+
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+- `GET /api/auth/me`
+
+Send the token to protected routes with:
+
+```text
+Authorization: Bearer <token>
+```
