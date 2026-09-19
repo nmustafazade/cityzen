@@ -1,3 +1,5 @@
+import { getStoredToken } from "./auth";
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "");
 
 interface ApiErrorBody {
@@ -29,9 +31,10 @@ export async function apiRequest<T>(
 
   const headers = new Headers(options.headers);
   headers.set("Content-Type", "application/json");
+  const token = options.token === undefined ? getStoredToken() : options.token;
 
-  if (options.token) {
-    headers.set("Authorization", `Bearer ${options.token}`);
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
   }
 
   let response: Response;

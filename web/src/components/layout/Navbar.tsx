@@ -40,6 +40,16 @@ export function Navbar() {
                 <Link href="/dashboard" className="text-sm font-medium text-slate-700 hover:text-emerald-700">
                   Dashboard
                 </Link>
+                {user.role === "CITIZEN" && (
+                  <>
+                    <Link href="/reports" className="hidden text-sm font-medium text-slate-700 hover:text-emerald-700 md:block">
+                      My Reports
+                    </Link>
+                    <Link href="/reports/new" className="hidden text-sm font-medium text-slate-700 hover:text-emerald-700 lg:block">
+                      Report an Issue
+                    </Link>
+                  </>
+                )}
                 <div className="hidden border-l border-slate-200 pl-5 text-right sm:block">
                   <p className="text-sm font-semibold text-slate-900">{user.firstName}</p>
                   <p className="text-xs text-slate-500">{roleLabels[user.role]}</p>

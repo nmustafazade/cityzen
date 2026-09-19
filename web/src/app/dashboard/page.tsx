@@ -1,13 +1,15 @@
 "use client";
 
+import Link from "next/link";
+
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { useAuth } from "@/context/AuthContext";
 import type { UserRole } from "@/types/user";
 
-const dashboardCards: Record<UserRole, { title: string; description: string }[]> = {
+const dashboardCards: Record<UserRole, { title: string; description: string; href?: string }[]> = {
   CITIZEN: [
-    { title: "My Reports", description: "Track the city issues you have submitted." },
-    { title: "Report an Issue", description: "Tell your municipality about a local problem." },
+    { title: "My Reports", description: "Track the city issues you have submitted.", href: "/reports" },
+    { title: "Report an Issue", description: "Tell your municipality about a local problem.", href: "/reports/new" },
     { title: "City Services", description: "Discover services available in your city." },
   ],
   EMPLOYEE: [
@@ -55,7 +57,13 @@ function DashboardContent() {
                 <div className="flex size-10 items-center justify-center rounded-xl bg-emerald-50 text-sm font-bold text-emerald-700">{String(index + 1).padStart(2, "0")}</div>
                 <h3 className="mt-5 font-bold text-slate-950">{card.title}</h3>
                 <p className="mt-2 text-sm leading-6 text-slate-600">{card.description}</p>
-                <p className="mt-5 text-xs font-semibold uppercase tracking-wide text-slate-400">Coming soon</p>
+                {card.href ? (
+                  <Link href={card.href} className="mt-5 inline-flex text-sm font-semibold text-emerald-700 hover:text-emerald-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600">
+                    Open <span aria-hidden="true" className="ml-1">→</span>
+                  </Link>
+                ) : (
+                  <p className="mt-5 text-xs font-semibold uppercase tracking-wide text-slate-400">Coming soon</p>
+                )}
               </article>
             ))}
           </div>
