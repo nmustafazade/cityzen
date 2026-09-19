@@ -55,6 +55,7 @@ export interface Report {
   images: ReportImage[];
   department?: { id: number; name: string } | null;
   assignedEmployee?: ReportPerson | null;
+  citizen?: ReportPerson;
   statusHistory?: ReportStatusHistory[];
 }
 
@@ -92,4 +93,23 @@ export interface CreateReportData {
   addressText?: string;
   latitude?: number;
   longitude?: number;
+}
+
+export interface ManageReportsParams extends MyReportsParams {
+  priority?: ReportPriority;
+  departmentId?: number;
+  assignedEmployeeId?: number;
+  citizenId?: number;
+  sortBy?: "createdAt" | "updatedAt" | "priority";
+  sortOrder?: "asc" | "desc";
+}
+
+export interface AssignReportData {
+  departmentId: number;
+  employeeId: number;
+}
+
+export interface UpdateReportStatusData {
+  status: ReportStatus;
+  note?: string;
 }

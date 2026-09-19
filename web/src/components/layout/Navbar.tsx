@@ -50,6 +50,11 @@ export function Navbar() {
                     </Link>
                   </>
                 )}
+                {(user.role === "EMPLOYEE" || user.role === "ADMIN") && (
+                  <Link href="/employee/reports" className="text-sm font-medium text-slate-700 hover:text-emerald-700">
+                    Reports
+                  </Link>
+                )}
                 <div className="hidden border-l border-slate-200 pl-5 text-right sm:block">
                   <p className="text-sm font-semibold text-slate-900">{user.firstName}</p>
                   <p className="text-xs text-slate-500">{roleLabels[user.role]}</p>

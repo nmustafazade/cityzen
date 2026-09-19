@@ -14,11 +14,11 @@ const dashboardCards: Record<UserRole, { title: string; description: string; hre
   ],
   EMPLOYEE: [
     { title: "Assigned Reports", description: "Review issues currently assigned to you." },
-    { title: "Report Management", description: "Coordinate and update municipal reports." },
+    { title: "Report Management", description: "Coordinate and update municipal reports.", href: "/employee/reports" },
     { title: "Department", description: "View your department workspace." },
   ],
   ADMIN: [
-    { title: "Reports", description: "Oversee city issue reporting activity." },
+    { title: "Reports", description: "Oversee city issue reporting activity.", href: "/employee/reports" },
     { title: "Users", description: "Manage citizen and municipality accounts." },
     { title: "Departments", description: "Coordinate municipal departments." },
   ],

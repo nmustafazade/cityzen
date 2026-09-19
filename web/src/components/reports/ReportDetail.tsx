@@ -7,11 +7,12 @@ import { useCallback, useEffect, useState } from "react";
 import { CitizenRoute } from "@/components/auth/ProtectedRoute";
 import { PriorityBadge, StatusBadge } from "@/components/reports/ReportBadge";
 import { ReportError, ReportLoading } from "@/components/reports/ReportStates";
+import { ReportTimeline } from "@/components/reports/ReportTimeline";
 import { useAuth } from "@/context/AuthContext";
 import { ApiError } from "@/lib/api";
-import { formatDateTime, reportStatusLabels } from "@/lib/format";
+import { formatDateTime } from "@/lib/format";
 import { cancelReport, getReport } from "@/lib/reports";
-import type { Report, ReportStatusHistory } from "@/types/report";
+import type { Report } from "@/types/report";
 
 const cancellableStatuses = new Set(["SUBMITTED", "UNDER_REVIEW"]);
 
@@ -160,15 +161,7 @@ function ReportDetailContent({ reportId }: { reportId: string }) {
         <h2 className="text-xl font-bold text-slate-950">Status Timeline</h2>
         <p className="mt-2 text-sm text-slate-600">Follow the progress of your report.</p>
         <div className="mt-7">
-          {report.statusHistory?.length ? (
-            <ol className="space-y-0">
-              {report.statusHistory.map((entry, index) => (
-                <TimelineEntry key={entry.id} entry={entry} isLast={index === report.statusHistory!.length - 1} />
-              ))}
-            </ol>
-          ) : (
-            <p className="rounded-lg bg-slate-50 px-4 py-3 text-sm text-slate-600">No status history is available yet.</p>
-          )}
+          <ReportTimeline history={report.statusHistory} />
         </div>
       </section>
     </main>
@@ -186,22 +179,6 @@ function DetailItem({ label, value }: { label: string; value: string }) {
 function coordinateLabel(report: Report): string {
   if (report.latitude === null || report.longitude === null) return "Not provided";
   return `${report.latitude}, ${report.longitude}`;
-}
-
-function TimelineEntry({ entry, isLast }: { entry: ReportStatusHistory; isLast: boolean }) {
-  const changedBy = entry.changedBy ? `${entry.changedBy.firstName} ${entry.changedBy.lastName}` : null;
-  return (
-    <li className="relative grid grid-cols-[2rem_1fr] gap-3 pb-7 last:pb-0">
-      {!isLast && <span className="absolute left-[0.45rem] top-4 h-full w-px bg-slate-200" aria-hidden="true" />}
-      <span className="relative mt-1 size-4 rounded-full border-4 border-emerald-100 bg-emerald-600" aria-hidden="true" />
-      <div>
-        <h3 className="font-bold text-slate-950">{reportStatusLabels[entry.newStatus]}</h3>
-        <p className="mt-1 text-sm text-slate-500">{formatDateTime(entry.createdAt)}</p>
-        {changedBy && <p className="mt-2 text-sm text-slate-600">Changed by {changedBy}</p>}
-        {entry.note && <p className="mt-2 rounded-lg bg-slate-50 px-3 py-2 text-sm leading-6 text-slate-700">{entry.note}</p>}
-      </div>
-    </li>
-  );
 }
 
 export function ReportDetail({ reportId }: { reportId: string }) {
