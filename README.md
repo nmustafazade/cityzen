@@ -54,7 +54,7 @@ cp .env.example .env
 npm run dev
 ```
 
-The API runs at [http://localhost:5000](http://localhost:5000). Check its health at [http://localhost:5000/api/health](http://localhost:5000/api/health).
+The API runs at [http://localhost:5051](http://localhost:5051). Check its health at [http://localhost:5051/api/health](http://localhost:5051/api/health).
 
 ## Database setup
 
@@ -69,7 +69,7 @@ npm run prisma:migrate -- --name init
 npm run dev
 ```
 
-Verify the connection at [http://localhost:5000/api/health/database](http://localhost:5000/api/health/database).
+Verify the connection at [http://localhost:5051/api/health/database](http://localhost:5051/api/health/database).
 
 ### Current database schema
 
@@ -99,3 +99,10 @@ Authorization: Bearer <token>
 - `GET /api/reports` — employee/admin report list
 - `PATCH /api/reports/:id/status` — employee/admin status update
 - `PATCH /api/reports/:id/assign` — employee/admin assignment
+- `POST /api/reports/:id/images` — add photos to an eligible citizen-owned report
+
+### Development image storage
+
+Report photos are stored locally in `server/uploads/reports/` during development and are served from `/uploads/reports/...`. JPEG, PNG, and WebP images are supported, with a maximum size of 5 MB per image and 5 images per report.
+
+Uploaded user files are ignored by Git. Local filesystem storage is for development only; a production deployment should use persistent object storage.

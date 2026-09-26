@@ -10,8 +10,10 @@ import {
   index,
   myReports,
 } from "../controllers/report.controller";
+import { uploadImages } from "../controllers/report-image.controller";
 import { authenticate } from "../middleware/auth.middleware";
 import { authorizeRoles } from "../middleware/role.middleware";
+import { parseReportImages } from "../middleware/upload.middleware";
 
 const reportRouter = Router();
 
@@ -25,6 +27,12 @@ reportRouter.get(
   index,
 );
 reportRouter.get("/:id", byId);
+reportRouter.post(
+  "/:id/images",
+  authorizeRoles(UserRole.CITIZEN),
+  parseReportImages,
+  uploadImages,
+);
 reportRouter.patch("/:id/cancel", authorizeRoles(UserRole.CITIZEN), cancel);
 reportRouter.patch(
   "/:id/status",

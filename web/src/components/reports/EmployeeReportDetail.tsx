@@ -7,6 +7,7 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 
 import { StaffRoute } from "@/components/auth/ProtectedRoute";
 import { PriorityBadge, StatusBadge } from "@/components/reports/ReportBadge";
+import { ReportImageGallery } from "@/components/reports/ReportImageGallery";
 import { ReportError, ReportLoading } from "@/components/reports/ReportStates";
 import { ReportTimeline } from "@/components/reports/ReportTimeline";
 import { useAuth } from "@/context/AuthContext";
@@ -215,6 +216,10 @@ function EmployeeReportDetailContent({ reportId }: { reportId: string }) {
               <DetailItem label="Latitude" value={report.latitude === null ? "Not provided" : String(report.latitude)} />
               <DetailItem label="Longitude" value={report.longitude === null ? "Not provided" : String(report.longitude)} />
             </dl>
+          </Section>
+
+          <Section title="Photos">
+            <ReportImageGallery images={report.images} reportTitle={report.title} />
           </Section>
 
           <Section title="Status History">

@@ -30,11 +30,17 @@ export async function apiRequest<T>(
   }
 
   const headers = new Headers(options.headers);
-  headers.set("Content-Type", "application/json");
+  const isFormData = typeof FormData !== "undefined" && options.body instanceof FormData;
+  if (!isFormData) headers.set("Content-Type", "application/json");
   const token = options.token === undefined ? getStoredToken() : options.token;
 
   if (token) {
     headers.set("Authorization", `Bearer ${token}`);
+  }
+
+  let requestBody: BodyInit | undefined;
+  if (options.body !== undefined) {
+    requestBody = isFormData ? options.body as FormData : JSON.stringify(options.body);
   }
 
   let response: Response;
@@ -43,7 +49,7 @@ export async function apiRequest<T>(
     response = await fetch(`${API_URL}${path}`, {
       ...options,
       headers,
-      body: options.body === undefined ? undefined : JSON.stringify(options.body),
+      body: requestBody,
     });
   } catch {
     throw new ApiError("Unable to connect to Cityzen. Please try again.", 0);

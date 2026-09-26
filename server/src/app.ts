@@ -1,5 +1,6 @@
 import cors from "cors";
 import express from "express";
+import path from "node:path";
 
 import { errorHandler } from "./middleware/error.middleware";
 import adminRouter from "./routes/admin.routes";
@@ -13,6 +14,13 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
+app.use(
+  "/uploads",
+  express.static(path.resolve(__dirname, "../uploads"), {
+    dotfiles: "deny",
+    setHeaders: (response) => response.setHeader("X-Content-Type-Options", "nosniff"),
+  }),
+);
 
 app.use("/api/health", healthRouter);
 app.use("/api/auth", authRouter);

@@ -7,11 +7,13 @@ import { useCallback, useEffect, useState } from "react";
 import { CitizenRoute } from "@/components/auth/ProtectedRoute";
 import { PriorityBadge, StatusBadge } from "@/components/reports/ReportBadge";
 import { ReportError, ReportLoading } from "@/components/reports/ReportStates";
+import { ReportImageGallery } from "@/components/reports/ReportImageGallery";
+import { ReportImagePicker } from "@/components/reports/ReportImagePicker";
 import { ReportTimeline } from "@/components/reports/ReportTimeline";
 import { useAuth } from "@/context/AuthContext";
 import { ApiError } from "@/lib/api";
 import { formatDateTime } from "@/lib/format";
-import { cancelReport, getReport } from "@/lib/reports";
+import { cancelReport, getReport, uploadReportImages } from "@/lib/reports";
 import type { Report } from "@/types/report";
 
 const cancellableStatuses = new Set(["SUBMITTED", "UNDER_REVIEW"]);
@@ -25,6 +27,10 @@ function ReportDetailContent({ reportId }: { reportId: string }) {
   const [error, setError] = useState("");
   const [showCancelConfirmation, setShowCancelConfirmation] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [selectedImages, setSelectedImages] = useState<File[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [pickerKey, setPickerKey] = useState(0);
+  const [successMessage, setSuccessMessage] = useState("");
 
   const handleApiError = useCallback(
     (caughtError: unknown, fallback: string) => {
@@ -105,10 +111,30 @@ function ReportDetailContent({ reportId }: { reportId: string }) {
     }
   }
 
+  async function uploadImages() {
+    if (!report || selectedImages.length === 0 || isUploading) return;
+    setIsUploading(true);
+    setError("");
+    setSuccessMessage("");
+    try {
+      const response = await uploadReportImages(report.id, selectedImages);
+      setReport({ ...report, images: [...report.images, ...response.images] });
+      setSelectedImages([]);
+      setPickerKey((current) => current + 1);
+      setSuccessMessage("Photos uploaded successfully.");
+    } catch (caughtError) {
+      handleApiError(caughtError, "Unable to upload photos. Please try again.");
+    } finally {
+      setIsUploading(false);
+    }
+  }
+
   if (isLoading) return <PageContainer><ReportLoading message="Loading report details..." /></PageContainer>;
-  if (error || !report) return <PageContainer><ReportError message={error || "Report not found."} onRetry={() => void loadReport()} /></PageContainer>;
+  if (error && !report) return <PageContainer><ReportError message={error} onRetry={() => void loadReport()} /></PageContainer>;
+  if (!report) return <PageContainer><ReportError message="Report not found." onRetry={() => void loadReport()} /></PageContainer>;
 
   const canCancel = cancellableStatuses.has(report.status);
+  const canUpload = canCancel && report.images.length < 5;
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-10 sm:py-14">
@@ -155,6 +181,26 @@ function ReportDetailContent({ reportId }: { reportId: string }) {
           <DetailItem label="Updated" value={formatDateTime(report.updatedAt)} />
           {report.resolvedAt && <DetailItem label="Resolved" value={formatDateTime(report.resolvedAt)} />}
         </dl>
+      </section>
+
+      <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+        <h2 className="text-xl font-bold text-slate-950">Photos</h2>
+        <p className="mt-2 text-sm text-slate-600">Photos help municipality teams understand the issue.</p>
+        {error && <div role="alert" className="mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
+        {successMessage && <div role="status" className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{successMessage}</div>}
+        <div className="mt-6"><ReportImageGallery images={report.images} reportTitle={report.title} /></div>
+
+        {canUpload && (
+          <div className="mt-7 border-t border-slate-200 pt-6">
+            <h3 className="font-bold text-slate-950">Add Photos</h3>
+            <div className="mt-4">
+              <ReportImagePicker key={pickerKey} maxFiles={5 - report.images.length} onFilesChange={setSelectedImages} disabled={isUploading} />
+            </div>
+            <button type="button" onClick={() => void uploadImages()} disabled={selectedImages.length === 0 || isUploading} className="mt-4 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 disabled:cursor-not-allowed disabled:bg-emerald-400">
+              {isUploading ? "Uploading..." : "Upload Photos"}
+            </button>
+          </div>
+        )}
       </section>
 
       <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">

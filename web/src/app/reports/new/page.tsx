@@ -6,10 +6,11 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 
 import { CitizenRoute } from "@/components/auth/ProtectedRoute";
 import { FormError } from "@/components/auth/LoginForm";
+import { ReportImagePicker } from "@/components/reports/ReportImagePicker";
 import { ReportLoading } from "@/components/reports/ReportStates";
 import { useAuth } from "@/context/AuthContext";
 import { ApiError } from "@/lib/api";
-import { createReport, getReportCategories } from "@/lib/reports";
+import { createReport, getReportCategories, uploadReportImages } from "@/lib/reports";
 import type { CreateReportData, ReportCategory } from "@/types/report";
 
 const initialForm = {
@@ -26,6 +27,8 @@ function CreateReportContent() {
   const { logout } = useAuth();
   const [categories, setCategories] = useState<ReportCategory[]>([]);
   const [form, setForm] = useState(initialForm);
+  const [images, setImages] = useState<File[]>([]);
+  const [createdReportId, setCreatedReportId] = useState<number | null>(null);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -107,24 +110,44 @@ function CreateReportContent() {
       return;
     }
 
-    const data: CreateReportData = {
-      categoryId: Number(form.categoryId),
-      title: form.title.trim(),
-      description: form.description.trim(),
-    };
-    if (form.addressText.trim()) data.addressText = form.addressText.trim();
-    if (form.latitude.trim() && form.longitude.trim()) {
-      data.latitude = Number(form.latitude);
-      data.longitude = Number(form.longitude);
-    }
-
     setError("");
     setIsSubmitting(true);
     try {
-      const response = await createReport(data);
-      router.push(`/reports/${response.report.id}`);
+      let reportId = createdReportId;
+      if (!reportId) {
+        const data: CreateReportData = {
+          categoryId: Number(form.categoryId),
+          title: form.title.trim(),
+          description: form.description.trim(),
+        };
+        if (form.addressText.trim()) data.addressText = form.addressText.trim();
+        if (form.latitude.trim() && form.longitude.trim()) {
+          data.latitude = Number(form.latitude);
+          data.longitude = Number(form.longitude);
+        }
+        const response = await createReport(data);
+        reportId = response.report.id;
+        setCreatedReportId(reportId);
+      }
+
+      if (images.length > 0) {
+        try {
+          await uploadReportImages(reportId, images);
+        } catch (uploadError) {
+          if (uploadError instanceof ApiError && uploadError.status === 401) {
+            logout();
+            router.replace("/login");
+            return;
+          }
+          const reason = uploadError instanceof ApiError ? uploadError.message : "Please try uploading them again.";
+          setError(`Your report was created, but the photos could not be uploaded. ${reason}`);
+          return;
+        }
+      }
+      router.push(`/reports/${reportId}`);
     } catch (caughtError) {
       handleApiError(caughtError, "Unable to submit your report. Please try again.");
+    } finally {
       setIsSubmitting(false);
     }
   }
@@ -143,6 +166,11 @@ function CreateReportContent() {
       ) : (
         <form onSubmit={handleSubmit} noValidate className="mt-8 space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
           {error && <FormError message={error} />}
+          {createdReportId && error && (
+            <p className="text-sm text-slate-700">
+              Report #{createdReportId} already exists. Retrying will only upload the selected photos. You can also <Link href={`/reports/${createdReportId}`} className="font-semibold text-emerald-700 underline">open the report</Link>.
+            </p>
+          )}
           {error && categories.length === 0 && (
             <button type="button" onClick={() => void loadCategories()} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:border-emerald-600 hover:text-emerald-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600">
               Retry Categories
@@ -166,8 +194,9 @@ function CreateReportContent() {
             <FormField label="Latitude" id="latitude" type="number" value={form.latitude} onChange={update("latitude")} step="any" min="-90" max="90" />
             <FormField label="Longitude" id="longitude" type="number" value={form.longitude} onChange={update("longitude")} step="any" min="-180" max="180" />
           </div>
+          <ReportImagePicker maxFiles={5} onFilesChange={setImages} disabled={isSubmitting} />
           <button type="submit" disabled={isSubmitting || categories.length === 0} className="w-full rounded-xl bg-emerald-600 px-5 py-3 font-semibold text-white shadow-sm transition hover:bg-emerald-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 disabled:cursor-not-allowed disabled:bg-emerald-400">
-            {isSubmitting ? "Submitting..." : "Submit Report"}
+            {isSubmitting ? "Submitting..." : createdReportId ? "Retry Photo Upload" : "Submit Report"}
           </button>
         </form>
       )}

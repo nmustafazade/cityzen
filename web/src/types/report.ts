@@ -19,6 +19,7 @@ export interface ReportCategory {
 
 export interface ReportImage {
   id: number;
+  reportId: number;
   imageUrl: string;
   createdAt: string;
 }
@@ -73,6 +74,10 @@ export interface MyReportsResponse {
 
 export interface ReportResponse {
   report: Report;
+}
+
+export interface ReportImagesResponse {
+  images: ReportImage[];
 }
 
 export interface CategoriesResponse {

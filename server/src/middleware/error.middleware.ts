@@ -1,5 +1,6 @@
 import type { ErrorRequestHandler } from "express";
 import { Prisma } from "@prisma/client";
+import multer from "multer";
 
 import { AppError } from "../utils/app-error";
 
@@ -13,6 +14,19 @@ export const errorHandler: ErrorRequestHandler = (
     response.status(error.statusCode).json({
       status: "error",
       message: error.message,
+    });
+    return;
+  }
+
+  if (error instanceof multer.MulterError) {
+    const messages: Partial<Record<multer.ErrorCode, string>> = {
+      LIMIT_FILE_SIZE: "Each image must be 5 MB or smaller",
+      LIMIT_FILE_COUNT: "A maximum of 5 images may be uploaded at once",
+      LIMIT_UNEXPECTED_FILE: "Use the images field and upload no more than 5 files",
+    };
+    response.status(400).json({
+      status: "error",
+      message: messages[error.code] ?? "Invalid image upload",
     });
     return;
   }

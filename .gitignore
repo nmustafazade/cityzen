@@ -36,3 +36,9 @@ Thumbs.db
 
 # Deployment
 .vercel/
+
+# Development uploads
+server/uploads/*
+!server/uploads/reports/
+server/uploads/reports/*
+!server/uploads/reports/.gitkeep

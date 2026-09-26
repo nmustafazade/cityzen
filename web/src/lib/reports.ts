@@ -7,6 +7,7 @@ import type {
   MyReportsParams,
   MyReportsResponse,
   ReportResponse,
+  ReportImagesResponse,
   UpdateReportStatusData,
 } from "@/types/report";
 
@@ -34,6 +35,15 @@ export async function createReport(data: CreateReportData) {
   return apiRequest<ReportResponse>("/api/reports", {
     method: "POST",
     body: data,
+  });
+}
+
+export async function uploadReportImages(reportId: number, files: File[]) {
+  const formData = new FormData();
+  files.forEach((file) => formData.append("images", file));
+  return apiRequest<ReportImagesResponse>(`/api/reports/${reportId}/images`, {
+    method: "POST",
+    body: formData,
   });
 }
 
