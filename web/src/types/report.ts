@@ -58,6 +58,46 @@ export interface Report {
   assignedEmployee?: ReportPerson | null;
   citizen?: ReportPerson;
   statusHistory?: ReportStatusHistory[];
+  upvoteCount?: number;
+  hasUpvoted?: boolean;
+}
+
+export interface ReportCommentUser {
+  id: number;
+  firstName: string;
+  lastName: string;
+  role: import("./user").UserRole;
+  profileImageUrl: string | null;
+}
+
+export interface ReportComment {
+  id: number;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+  user: ReportCommentUser;
+  parentComment: {
+    id: number;
+    content: string;
+    user: ReportCommentUser;
+  } | null;
+}
+
+export interface ReportFeedback {
+  id: number;
+  reportId: number;
+  citizenId: number;
+  confirmed: boolean;
+  rating: number;
+  comment: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FeedbackInput {
+  confirmed: boolean;
+  rating: number;
+  comment?: string | null;
 }
 
 export interface ReportPagination {
@@ -78,6 +118,14 @@ export interface ReportResponse {
 
 export interface ReportImagesResponse {
   images: ReportImage[];
+}
+
+export interface ReportCommentsResponse {
+  comments: ReportComment[];
+}
+
+export interface ReportFeedbackResponse {
+  feedback: ReportFeedback | null;
 }
 
 export interface CategoriesResponse {

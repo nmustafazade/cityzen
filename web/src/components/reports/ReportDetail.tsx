@@ -10,12 +10,14 @@ import { PriorityBadge, StatusBadge } from "@/components/reports/ReportBadge";
 import { ReportError, ReportLoading } from "@/components/reports/ReportStates";
 import { ReportImageGallery } from "@/components/reports/ReportImageGallery";
 import { ReportImagePicker } from "@/components/reports/ReportImagePicker";
+import { ReportComments } from "@/components/reports/ReportComments";
+import { ResolutionFeedback } from "@/components/reports/ResolutionFeedback";
 import { ReportTimeline } from "@/components/reports/ReportTimeline";
 import { useAuth } from "@/context/AuthContext";
 import { ApiError } from "@/lib/api";
 import { formatDateTime } from "@/lib/format";
 import { coordinatesFromValues, formatCoordinate } from "@/lib/location";
-import { cancelReport, getReport, uploadReportImages } from "@/lib/reports";
+import { cancelReport, getReport, toggleReportUpvote, uploadReportImages } from "@/lib/reports";
 import type { Report } from "@/types/report";
 
 const cancellableStatuses = new Set(["SUBMITTED", "UNDER_REVIEW"]);
@@ -33,6 +35,8 @@ function ReportDetailContent({ reportId }: { reportId: string }) {
   const [isUploading, setIsUploading] = useState(false);
   const [pickerKey, setPickerKey] = useState(0);
   const [successMessage, setSuccessMessage] = useState("");
+  const [isUpvoting, setIsUpvoting] = useState(false);
+  const [interactionError, setInteractionError] = useState("");
 
   const handleApiError = useCallback(
     (caughtError: unknown, fallback: string) => {
@@ -104,7 +108,11 @@ function ReportDetailContent({ reportId }: { reportId: string }) {
     setError("");
     try {
       const response = await cancelReport(report.id);
-      setReport(response.report);
+      setReport({
+        ...response.report,
+        upvoteCount: report.upvoteCount,
+        hasUpvoted: report.hasUpvoted,
+      });
       setShowCancelConfirmation(false);
     } catch (caughtError) {
       handleApiError(caughtError, "Unable to cancel this report. Please try again.");
@@ -131,6 +139,25 @@ function ReportDetailContent({ reportId }: { reportId: string }) {
     }
   }
 
+  async function toggleUpvote() {
+    if (!report || isUpvoting) return;
+    setIsUpvoting(true);
+    setInteractionError("");
+    try {
+      const response = await toggleReportUpvote(report.id);
+      setReport({ ...report, hasUpvoted: response.upvoted, upvoteCount: response.upvoteCount });
+    } catch (caughtError) {
+      if (caughtError instanceof ApiError && caughtError.status === 401) {
+        logout();
+        router.replace("/login");
+      } else {
+        setInteractionError(caughtError instanceof ApiError ? caughtError.message : "Unable to update your support.");
+      }
+    } finally {
+      setIsUpvoting(false);
+    }
+  }
+
   if (isLoading) return <PageContainer><ReportLoading message="Loading report details..." /></PageContainer>;
   if (error && !report) return <PageContainer><ReportError message={error} onRetry={() => void loadReport()} /></PageContainer>;
   if (!report) return <PageContainer><ReportError message="Report not found." onRetry={() => void loadReport()} /></PageContainer>;
@@ -150,12 +177,17 @@ function ReportDetailContent({ reportId }: { reportId: string }) {
             <h1 className="mt-4 text-3xl font-bold tracking-tight text-slate-950">{report.title}</h1>
             <p className="mt-2 font-semibold text-emerald-700">{report.category.name}</p>
           </div>
-          {canCancel && !showCancelConfirmation && (
-            <button type="button" onClick={() => setShowCancelConfirmation(true)} className="rounded-lg border border-red-200 px-4 py-2.5 text-sm font-semibold text-red-700 transition hover:bg-red-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600">
-              Cancel Report
+          <div className="flex flex-wrap gap-2">
+            <button type="button" aria-pressed={Boolean(report.hasUpvoted)} onClick={() => void toggleUpvote()} disabled={isUpvoting} className={`rounded-lg border px-4 py-2.5 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 disabled:opacity-60 ${report.hasUpvoted ? "border-emerald-600 bg-emerald-50 text-emerald-800" : "border-slate-300 text-slate-700 hover:border-emerald-600"}`}>
+              ▲ {report.upvoteCount ?? 0} {report.hasUpvoted ? "Supported" : "Support this issue"}
             </button>
-          )}
+            {canCancel && !showCancelConfirmation && (
+              <button type="button" onClick={() => setShowCancelConfirmation(true)} className="rounded-lg border border-red-200 px-4 py-2.5 text-sm font-semibold text-red-700 transition hover:bg-red-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600">Cancel Report</button>
+            )}
+          </div>
         </div>
+
+        {interactionError && <p role="alert" className="mt-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{interactionError}</p>}
 
         {showCancelConfirmation && (
           <div className="mt-6 rounded-xl border border-red-200 bg-red-50 p-4" role="alertdialog" aria-labelledby="cancel-title" aria-describedby="cancel-description">
@@ -222,6 +254,10 @@ function ReportDetailContent({ reportId }: { reportId: string }) {
           <ReportTimeline history={report.statusHistory} />
         </div>
       </section>
+
+      {report.status === "RESOLVED" && <div className="mt-6"><ResolutionFeedback reportId={report.id} editable /></div>}
+
+      <div className="mt-6"><ReportComments reportId={report.id} /></div>
     </main>
   );
 }

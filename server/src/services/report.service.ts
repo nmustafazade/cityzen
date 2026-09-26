@@ -135,7 +135,15 @@ export async function getReportById(
 ) {
   const report = await database.report.findUnique({
     where: { id: reportId },
-    include: reportDetailInclude,
+    include: {
+      ...reportDetailInclude,
+      _count: { select: { upvotes: true } },
+      upvotes: {
+        where: { userId: authenticatedUser.userId },
+        select: { id: true },
+        take: 1,
+      },
+    },
   });
 
   if (!report) {
@@ -149,7 +157,12 @@ export async function getReportById(
     throw new AppError(403, "You do not have permission to view this report");
   }
 
-  return report;
+  const { _count, upvotes, ...reportData } = report;
+  return {
+    ...reportData,
+    upvoteCount: _count.upvotes,
+    hasUpvoted: upvotes.length > 0,
+  };
 }
 
 export async function cancelReport(reportId: number, citizenId: number) {

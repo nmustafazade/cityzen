@@ -8,9 +8,11 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { StaffRoute } from "@/components/auth/ProtectedRoute";
 import { ReportLocationMap } from "@/components/maps/ReportLocationMap";
 import { PriorityBadge, StatusBadge } from "@/components/reports/ReportBadge";
+import { ReportComments } from "@/components/reports/ReportComments";
 import { ReportImageGallery } from "@/components/reports/ReportImageGallery";
 import { ReportError, ReportLoading } from "@/components/reports/ReportStates";
 import { ReportTimeline } from "@/components/reports/ReportTimeline";
+import { ResolutionFeedback } from "@/components/reports/ResolutionFeedback";
 import { useAuth } from "@/context/AuthContext";
 import { ApiError } from "@/lib/api";
 import { formatDateTime, reportStatusLabels } from "@/lib/format";
@@ -141,7 +143,11 @@ function EmployeeReportDetailContent({ reportId }: { reportId: string }) {
         departmentId: Number(departmentId),
         employeeId: Number(employeeId),
       });
-      setReport(response.report);
+      setReport({
+        ...response.report,
+        upvoteCount: report.upvoteCount,
+        hasUpvoted: report.hasUpvoted,
+      });
       setSuccessMessage("Report assigned successfully.");
     } catch (caughtError) {
       handleApiError(caughtError, "Unable to assign this report. Please try again.");
@@ -166,7 +172,11 @@ function EmployeeReportDetailContent({ reportId }: { reportId: string }) {
         status: newStatus,
         note: note.trim() || undefined,
       });
-      setReport(response.report);
+      setReport({
+        ...response.report,
+        upvoteCount: report.upvoteCount,
+        hasUpvoted: report.hasUpvoted,
+      });
       setNewStatus("");
       setNote("");
       setSuccessMessage("Report status updated successfully.");
@@ -236,6 +246,11 @@ function EmployeeReportDetailContent({ reportId }: { reportId: string }) {
             <CitizenSummary report={report} />
           </Section>
 
+          <Section title="Community Support">
+            <p className="text-2xl font-bold text-slate-950">{report.upvoteCount ?? 0}</p>
+            <p className="mt-1 text-sm text-slate-600">upvotes</p>
+          </Section>
+
           <Section title="Assignment">
             <dl className="space-y-5">
               <DetailItem label="Department" value={report.department?.name ?? "Not assigned"} />
@@ -285,6 +300,9 @@ function EmployeeReportDetailContent({ reportId }: { reportId: string }) {
           </Section>
         </aside>
       </div>
+
+      {report.status === "RESOLVED" && <div className="mt-6"><ResolutionFeedback reportId={report.id} editable={false} /></div>}
+      <div className="mt-6"><ReportComments reportId={report.id} /></div>
     </main>
   );
 }

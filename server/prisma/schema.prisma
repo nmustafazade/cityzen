@@ -49,6 +49,9 @@ model User {
   submittedReports Report[]              @relation("CitizenReports")
   assignedReports  Report[]              @relation("AssignedEmployeeReports")
   reportChanges    ReportStatusHistory[] @relation("ReportStatusChangedBy")
+  reportComments   ReportComment[]
+  reportUpvotes    ReportUpvote[]
+  reportFeedbacks  ReportFeedback[]      @relation("CitizenReportFeedback")
 
   @@index([role])
   @@index([departmentId])
@@ -127,6 +130,9 @@ model Report {
   assignedEmployee   User?                 @relation("AssignedEmployeeReports", fields: [assignedEmployeeId], references: [id], onDelete: SetNull)
   images             ReportImage[]
   statusHistory      ReportStatusHistory[]
+  comments           ReportComment[]
+  upvotes            ReportUpvote[]
+  feedback           ReportFeedback?
 
   @@index([citizenId, createdAt])
   @@index([categoryId])
@@ -159,4 +165,51 @@ model ReportStatusHistory {
 
   @@index([reportId, createdAt])
   @@index([changedById])
+}
+
+model ReportComment {
+  id              Int             @id @default(autoincrement())
+  reportId        Int
+  userId          Int
+  parentCommentId Int?
+  content         String          @db.Text
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  report          Report          @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  user            User            @relation(fields: [userId], references: [id], onDelete: Restrict)
+  parentComment   ReportComment?  @relation("CommentReplies", fields: [parentCommentId], references: [id], onDelete: SetNull)
+  replies         ReportComment[] @relation("CommentReplies")
+
+  @@index([reportId, createdAt])
+  @@index([userId])
+  @@index([parentCommentId])
+  @@index([createdAt])
+}
+
+model ReportUpvote {
+  id        Int      @id @default(autoincrement())
+  reportId  Int
+  userId    Int
+  createdAt DateTime @default(now())
+  report    Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([reportId, userId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model ReportFeedback {
+  id        Int      @id @default(autoincrement())
+  reportId  Int      @unique
+  citizenId Int
+  rating    Int
+  comment   String?  @db.Text
+  confirmed Boolean
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  report    Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  citizen   User     @relation("CitizenReportFeedback", fields: [citizenId], references: [id], onDelete: Restrict)
+
+  @@index([citizenId])
 }

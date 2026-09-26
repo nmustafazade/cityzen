@@ -8,6 +8,11 @@ import type {
   MyReportsResponse,
   ReportResponse,
   ReportImagesResponse,
+  ReportCommentsResponse,
+  ReportComment,
+  ReportFeedbackResponse,
+  ReportFeedback,
+  FeedbackInput,
   UpdateReportStatusData,
 } from "@/types/report";
 
@@ -89,6 +94,40 @@ export async function updateReportStatus(
 ) {
   return apiRequest<ReportResponse>(`/api/reports/${id}/status`, {
     method: "PATCH",
+    body: data,
+  });
+}
+
+export function getReportComments(reportId: number) {
+  return apiRequest<ReportCommentsResponse>(`/api/reports/${reportId}/comments`);
+}
+
+export function createReportComment(reportId: number, content: string, parentCommentId?: number) {
+  return apiRequest<{ comment: ReportComment }>(`/api/reports/${reportId}/comments`, {
+    method: "POST",
+    body: { content, parentCommentId },
+  });
+}
+
+export function deleteReportComment(reportId: number, commentId: number) {
+  return apiRequest<{ status: "ok"; message: string }>(`/api/reports/${reportId}/comments/${commentId}`, {
+    method: "DELETE",
+  });
+}
+
+export function toggleReportUpvote(reportId: number) {
+  return apiRequest<{ upvoted: boolean; upvoteCount: number }>(`/api/reports/${reportId}/upvote`, {
+    method: "POST",
+  });
+}
+
+export function getReportFeedback(reportId: number) {
+  return apiRequest<ReportFeedbackResponse>(`/api/reports/${reportId}/feedback`);
+}
+
+export function saveReportFeedback(reportId: number, data: FeedbackInput) {
+  return apiRequest<{ feedback: ReportFeedback }>(`/api/reports/${reportId}/feedback`, {
+    method: "PUT",
     body: data,
   });
 }

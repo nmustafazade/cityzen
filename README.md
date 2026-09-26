@@ -100,6 +100,10 @@ Authorization: Bearer <token>
 - `PATCH /api/reports/:id/status` — employee/admin status update
 - `PATCH /api/reports/:id/assign` — employee/admin assignment
 - `POST /api/reports/:id/images` — add photos to an eligible citizen-owned report
+- `GET|POST /api/reports/:id/comments` — view or add report discussion comments
+- `DELETE /api/reports/:reportId/comments/:commentId` — delete an authorized comment
+- `POST /api/reports/:id/upvote` — toggle citizen support for an owned report
+- `GET|PUT /api/reports/:id/feedback` — view or save resolution feedback
 
 ### Development image storage
 
