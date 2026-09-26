@@ -106,3 +106,7 @@ Authorization: Bearer <token>
 Report photos are stored locally in `server/uploads/reports/` during development and are served from `/uploads/reports/...`. JPEG, PNG, and WebP images are supported, with a maximum size of 5 MB per image and 5 images per report.
 
 Uploaded user files are ignored by Git. Local filesystem storage is for development only; a production deployment should use persistent object storage.
+
+### Report locations
+
+Report creation uses Leaflet with OpenStreetMap tiles for optional map and browser GPS selection. The initial development map center (`40.4093`, `49.8671`) is only a visual fallback; it is not saved unless the citizen explicitly selects a location. Browser location is requested only after the user clicks **Use My Current Location**.

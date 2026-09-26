@@ -6,11 +6,14 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 
 import { CitizenRoute } from "@/components/auth/ProtectedRoute";
 import { FormError } from "@/components/auth/LoginForm";
+import { LocationPicker } from "@/components/maps/LocationPicker";
 import { ReportImagePicker } from "@/components/reports/ReportImagePicker";
 import { ReportLoading } from "@/components/reports/ReportStates";
 import { useAuth } from "@/context/AuthContext";
 import { ApiError } from "@/lib/api";
+import { formatCoordinate } from "@/lib/location";
 import { createReport, getReportCategories, uploadReportImages } from "@/lib/reports";
+import type { Coordinates } from "@/types/location";
 import type { CreateReportData, ReportCategory } from "@/types/report";
 
 const initialForm = {
@@ -27,6 +30,7 @@ function CreateReportContent() {
   const { logout } = useAuth();
   const [categories, setCategories] = useState<ReportCategory[]>([]);
   const [form, setForm] = useState(initialForm);
+  const [selectedCoordinates, setSelectedCoordinates] = useState<Coordinates | null>(null);
   const [images, setImages] = useState<File[]>([]);
   const [createdReportId, setCreatedReportId] = useState<number | null>(null);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
@@ -78,6 +82,15 @@ function CreateReportContent() {
     return (value: string) => setForm((current) => ({ ...current, [field]: value }));
   }
 
+  function updateLocation(coordinates: Coordinates | null) {
+    setSelectedCoordinates(coordinates);
+    setForm((current) => ({
+      ...current,
+      latitude: coordinates ? formatCoordinate(coordinates.latitude) : "",
+      longitude: coordinates ? formatCoordinate(coordinates.longitude) : "",
+    }));
+  }
+
   function validate(): string | null {
     const title = form.title.trim();
     const description = form.description.trim();
@@ -87,17 +100,9 @@ function CreateReportContent() {
     if (title.length > 150) return "Title must be 150 characters or fewer.";
     if (!description) return "Description is required.";
     if (description.length > 5000) return "Description must be 5,000 characters or fewer.";
+    if (!address) return "Address is required.";
     if (address.length > 180) return "Address must be 180 characters or fewer.";
-
-    const hasLatitude = Boolean(form.latitude.trim());
-    const hasLongitude = Boolean(form.longitude.trim());
-    if (hasLatitude !== hasLongitude) return "Provide both latitude and longitude, or leave both empty.";
-    if (hasLatitude) {
-      const latitude = Number(form.latitude);
-      const longitude = Number(form.longitude);
-      if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) return "Latitude must be a number between -90 and 90.";
-      if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) return "Longitude must be a number between -180 and 180.";
-    }
+    if (!selectedCoordinates) return "Select the issue location on the map.";
     return null;
   }
 
@@ -109,6 +114,11 @@ function CreateReportContent() {
       setError(validationError);
       return;
     }
+    if (!selectedCoordinates) {
+      setError("Select the issue location on the map.");
+      return;
+    }
+    const submissionCoordinates = selectedCoordinates;
 
     setError("");
     setIsSubmitting(true);
@@ -119,12 +129,10 @@ function CreateReportContent() {
           categoryId: Number(form.categoryId),
           title: form.title.trim(),
           description: form.description.trim(),
+          addressText: form.addressText.trim(),
+          latitude: submissionCoordinates.latitude,
+          longitude: submissionCoordinates.longitude,
         };
-        if (form.addressText.trim()) data.addressText = form.addressText.trim();
-        if (form.latitude.trim() && form.longitude.trim()) {
-          data.latitude = Number(form.latitude);
-          data.longitude = Number(form.longitude);
-        }
         const response = await createReport(data);
         reportId = response.report.id;
         setCreatedReportId(reportId);
@@ -189,11 +197,8 @@ function CreateReportContent() {
             <label htmlFor="description" className="mb-1.5 block text-sm font-semibold text-slate-800">Description <span aria-hidden="true">*</span></label>
             <textarea id="description" required rows={6} maxLength={5000} value={form.description} onChange={(event) => update("description")(event.target.value)} className={inputStyle} />
           </div>
-          <FormField label="Address" id="addressText" value={form.addressText} onChange={update("addressText")} maxLength={180} />
-          <div className="grid gap-5 sm:grid-cols-2">
-            <FormField label="Latitude" id="latitude" type="number" value={form.latitude} onChange={update("latitude")} step="any" min="-90" max="90" />
-            <FormField label="Longitude" id="longitude" type="number" value={form.longitude} onChange={update("longitude")} step="any" min="-180" max="180" />
-          </div>
+          <FormField label="Address" id="addressText" required value={form.addressText} onChange={update("addressText")} maxLength={180} />
+          <LocationPicker coordinates={selectedCoordinates} onChange={updateLocation} disabled={isSubmitting} />
           <ReportImagePicker maxFiles={5} onFilesChange={setImages} disabled={isSubmitting} />
           <button type="submit" disabled={isSubmitting || categories.length === 0} className="w-full rounded-xl bg-emerald-600 px-5 py-3 font-semibold text-white shadow-sm transition hover:bg-emerald-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 disabled:cursor-not-allowed disabled:bg-emerald-400">
             {isSubmitting ? "Submitting..." : createdReportId ? "Retry Photo Upload" : "Submit Report"}

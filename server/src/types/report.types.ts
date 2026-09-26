@@ -4,9 +4,9 @@ export interface CreateReportInput {
   title: string;
   description: string;
   categoryId: number;
-  addressText?: string;
-  latitude?: number;
-  longitude?: number;
+  addressText: string;
+  latitude: number;
+  longitude: number;
   imageUrls?: string[];
 }
 

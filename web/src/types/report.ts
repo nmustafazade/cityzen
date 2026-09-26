@@ -95,9 +95,9 @@ export interface CreateReportData {
   title: string;
   description: string;
   categoryId: number;
-  addressText?: string;
-  latitude?: number;
-  longitude?: number;
+  addressText: string;
+  latitude: number;
+  longitude: number;
 }
 
 export interface ManageReportsParams extends MyReportsParams {

@@ -62,6 +62,17 @@ function coordinate(
   return parsed;
 }
 
+function requiredCoordinate(
+  value: unknown,
+  field: string,
+  minimum: number,
+  maximum: number,
+): number {
+  const parsed = coordinate(value, field, minimum, maximum);
+  if (parsed === undefined) throw new AppError(400, `${field} is required`);
+  return parsed;
+}
+
 function validImageUrls(value: unknown): string[] | undefined {
   if (value === undefined) return undefined;
   if (!Array.isArray(value)) throw new AppError(400, "imageUrls must be an array");
@@ -109,13 +120,15 @@ function authenticatedUser(request: Request) {
 function parseCreateBody(body: unknown): CreateReportInput {
   if (!body || typeof body !== "object") throw new AppError(400, "Invalid request body");
   const input = body as Record<string, unknown>;
+  const addressText = requiredString(input.addressText, "address").trim();
+  if (addressText.length > 180) throw new AppError(400, "address must be 180 characters or fewer");
   return {
     title: requiredString(input.title, "title"),
     description: requiredString(input.description, "description"),
     categoryId: positiveInteger(input.categoryId, "categoryId"),
-    addressText: optionalString(input.addressText, "addressText"),
-    latitude: coordinate(input.latitude, "latitude", -90, 90),
-    longitude: coordinate(input.longitude, "longitude", -180, 180),
+    addressText,
+    latitude: requiredCoordinate(input.latitude, "latitude", -90, 90),
+    longitude: requiredCoordinate(input.longitude, "longitude", -180, 180),
     imageUrls: validImageUrls(input.imageUrls),
   };
 }

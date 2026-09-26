@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 
 import { StaffRoute } from "@/components/auth/ProtectedRoute";
+import { ReportLocationMap } from "@/components/maps/ReportLocationMap";
 import { PriorityBadge, StatusBadge } from "@/components/reports/ReportBadge";
 import { ReportImageGallery } from "@/components/reports/ReportImageGallery";
 import { ReportError, ReportLoading } from "@/components/reports/ReportStates";
@@ -13,6 +14,7 @@ import { ReportTimeline } from "@/components/reports/ReportTimeline";
 import { useAuth } from "@/context/AuthContext";
 import { ApiError } from "@/lib/api";
 import { formatDateTime, reportStatusLabels } from "@/lib/format";
+import { coordinatesFromValues, formatCoordinate } from "@/lib/location";
 import { getManagementDepartments, getManagementEmployees, type ManagementEmployee } from "@/lib/management";
 import { assignReport, getReport, updateReportStatus } from "@/lib/reports";
 import type { Department } from "@/types/department";
@@ -178,6 +180,7 @@ function EmployeeReportDetailContent({ reportId }: { reportId: string }) {
   if (isLoading) return <PageContainer><ReportLoading message="Loading report details..." /></PageContainer>;
   if (error && !report) return <PageContainer><ReportError message={error} onRetry={() => void loadReport()} /></PageContainer>;
   if (!report) return <PageContainer><ReportError message="Report not found." onRetry={() => void loadReport()} /></PageContainer>;
+  const reportCoordinates = coordinatesFromValues(report.latitude, report.longitude);
 
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-10 sm:py-14">
@@ -213,9 +216,10 @@ function EmployeeReportDetailContent({ reportId }: { reportId: string }) {
           <Section title="Location">
             <dl className="grid gap-5 sm:grid-cols-3">
               <DetailItem label="Address" value={report.addressText ?? "Not provided"} />
-              <DetailItem label="Latitude" value={report.latitude === null ? "Not provided" : String(report.latitude)} />
-              <DetailItem label="Longitude" value={report.longitude === null ? "Not provided" : String(report.longitude)} />
+              <DetailItem label="Latitude" value={reportCoordinates ? formatCoordinate(reportCoordinates.latitude) : "Not provided"} />
+              <DetailItem label="Longitude" value={reportCoordinates ? formatCoordinate(reportCoordinates.longitude) : "Not provided"} />
             </dl>
+            {reportCoordinates && <div className="mt-5"><ReportLocationMap coordinates={reportCoordinates} title={report.title} /></div>}
           </Section>
 
           <Section title="Photos">

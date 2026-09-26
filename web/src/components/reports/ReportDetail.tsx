@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 import { CitizenRoute } from "@/components/auth/ProtectedRoute";
+import { ReportLocationMap } from "@/components/maps/ReportLocationMap";
 import { PriorityBadge, StatusBadge } from "@/components/reports/ReportBadge";
 import { ReportError, ReportLoading } from "@/components/reports/ReportStates";
 import { ReportImageGallery } from "@/components/reports/ReportImageGallery";
@@ -13,6 +14,7 @@ import { ReportTimeline } from "@/components/reports/ReportTimeline";
 import { useAuth } from "@/context/AuthContext";
 import { ApiError } from "@/lib/api";
 import { formatDateTime } from "@/lib/format";
+import { coordinatesFromValues, formatCoordinate } from "@/lib/location";
 import { cancelReport, getReport, uploadReportImages } from "@/lib/reports";
 import type { Report } from "@/types/report";
 
@@ -135,6 +137,7 @@ function ReportDetailContent({ reportId }: { reportId: string }) {
 
   const canCancel = cancellableStatuses.has(report.status);
   const canUpload = canCancel && report.images.length < 5;
+  const reportCoordinates = coordinatesFromValues(report.latitude, report.longitude);
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-10 sm:py-14">
@@ -182,6 +185,15 @@ function ReportDetailContent({ reportId }: { reportId: string }) {
           {report.resolvedAt && <DetailItem label="Resolved" value={formatDateTime(report.resolvedAt)} />}
         </dl>
       </section>
+
+      {reportCoordinates && (
+        <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+          <h2 className="text-xl font-bold text-slate-950">Location</h2>
+          {report.addressText && <p className="mt-2 text-sm text-slate-600">{report.addressText}</p>}
+          <p className="mt-2 text-sm text-slate-600">Latitude: {formatCoordinate(reportCoordinates.latitude)} · Longitude: {formatCoordinate(reportCoordinates.longitude)}</p>
+          <div className="mt-5"><ReportLocationMap coordinates={reportCoordinates} title={report.title} /></div>
+        </section>
+      )}
 
       <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
         <h2 className="text-xl font-bold text-slate-950">Photos</h2>
