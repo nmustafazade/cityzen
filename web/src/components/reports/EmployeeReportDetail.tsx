@@ -12,7 +12,9 @@ import { ReportTimeline } from "@/components/reports/ReportTimeline";
 import { useAuth } from "@/context/AuthContext";
 import { ApiError } from "@/lib/api";
 import { formatDateTime, reportStatusLabels } from "@/lib/format";
-import { getReport, updateReportStatus } from "@/lib/reports";
+import { getManagementDepartments, getManagementEmployees, type ManagementEmployee } from "@/lib/management";
+import { assignReport, getReport, updateReportStatus } from "@/lib/reports";
+import type { Department } from "@/types/department";
 import type { Report, ReportStatus } from "@/types/report";
 
 const statuses = Object.keys(reportStatusLabels) as ReportStatus[];
@@ -25,8 +27,14 @@ function EmployeeReportDetailContent({ reportId }: { reportId: string }) {
   const [report, setReport] = useState<Report | null>(null);
   const [newStatus, setNewStatus] = useState<ReportStatus | "">("");
   const [note, setNote] = useState("");
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [employees, setEmployees] = useState<ManagementEmployee[]>([]);
+  const [departmentId, setDepartmentId] = useState("");
+  const [employeeId, setEmployeeId] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingEmployees, setIsLoadingEmployees] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isAssigning, setIsAssigning] = useState(false);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
@@ -92,6 +100,52 @@ function EmployeeReportDetailContent({ reportId }: { reportId: string }) {
       isCurrent = false;
     };
   }, [handleApiError, numericId]);
+
+  useEffect(() => {
+    let isCurrent = true;
+    void getManagementDepartments()
+      .then((response) => { if (isCurrent) setDepartments(response.departments); })
+      .catch((caughtError: unknown) => { if (isCurrent) handleApiError(caughtError, "Unable to load departments."); });
+    return () => { isCurrent = false; };
+  }, [handleApiError]);
+
+  async function handleDepartmentChange(value: string) {
+    setDepartmentId(value);
+    setEmployeeId("");
+    setEmployees([]);
+    setSuccessMessage("");
+    if (!value) return;
+    setIsLoadingEmployees(true);
+    setError("");
+    try {
+      const response = await getManagementEmployees(Number(value));
+      setEmployees(response.employees);
+    } catch (caughtError) {
+      handleApiError(caughtError, "Unable to load employees for this department.");
+    } finally {
+      setIsLoadingEmployees(false);
+    }
+  }
+
+  async function handleAssignment(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!report || !departmentId || !employeeId || isAssigning) return;
+    setIsAssigning(true);
+    setError("");
+    setSuccessMessage("");
+    try {
+      const response = await assignReport(report.id, {
+        departmentId: Number(departmentId),
+        employeeId: Number(employeeId),
+      });
+      setReport(response.report);
+      setSuccessMessage("Report assigned successfully.");
+    } catch (caughtError) {
+      handleApiError(caughtError, "Unable to assign this report. Please try again.");
+    } finally {
+      setIsAssigning(false);
+    }
+  }
 
   async function handleStatusUpdate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -178,11 +232,26 @@ function EmployeeReportDetailContent({ reportId }: { reportId: string }) {
               <DetailItem label="Department" value={report.department?.name ?? "Not assigned"} />
               <DetailItem label="Assigned employee" value={report.assignedEmployee ? `${report.assignedEmployee.firstName} ${report.assignedEmployee.lastName}` : "Not assigned"} />
             </dl>
-            <div className="mt-6 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4">
-              <p className="text-sm font-semibold text-slate-700">Assignment editing unavailable</p>
-              <p className="mt-1 text-xs leading-5 text-slate-500">Department and employee lookup APIs are required before assignments can be changed safely.</p>
-              <button type="button" disabled className="mt-3 rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-400">Edit Assignment</button>
-            </div>
+            <form onSubmit={handleAssignment} className="mt-6 space-y-4 border-t border-slate-100 pt-5">
+              <div>
+                <label htmlFor="assignment-department" className="mb-1.5 block text-sm font-semibold text-slate-800">Department</label>
+                <select id="assignment-department" value={departmentId} onChange={(event) => void handleDepartmentChange(event.target.value)} disabled={isAssigning} className={inputStyle}>
+                  <option value="">Select a department</option>
+                  {departments.map((department) => <option key={department.id} value={department.id}>{department.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="assignment-employee" className="mb-1.5 block text-sm font-semibold text-slate-800">Employee</label>
+                <select id="assignment-employee" value={employeeId} onChange={(event) => setEmployeeId(event.target.value)} disabled={!departmentId || isLoadingEmployees || isAssigning} className={inputStyle}>
+                  <option value="">{isLoadingEmployees ? "Loading employees..." : "Select an employee"}</option>
+                  {employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.firstName} {employee.lastName}</option>)}
+                </select>
+                {departmentId && !isLoadingEmployees && employees.length === 0 && <p className="mt-2 text-xs text-amber-700">No active employees in this department.</p>}
+              </div>
+              <button type="submit" disabled={!departmentId || !employeeId || isAssigning} className="w-full rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 disabled:cursor-not-allowed disabled:bg-emerald-400">
+                {isAssigning ? "Assigning..." : "Assign Report"}
+              </button>
+            </form>
           </Section>
 
           <Section title="Status Management">

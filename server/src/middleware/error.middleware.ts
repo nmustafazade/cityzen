@@ -23,7 +23,7 @@ export const errorHandler: ErrorRequestHandler = (
   ) {
     response.status(409).json({
       status: "error",
-      message: "An account with this email already exists",
+      message: "A record with this value already exists",
     });
     return;
   }

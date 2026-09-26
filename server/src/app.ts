@@ -2,8 +2,10 @@ import cors from "cors";
 import express from "express";
 
 import { errorHandler } from "./middleware/error.middleware";
+import adminRouter from "./routes/admin.routes";
 import authRouter from "./routes/auth.routes";
 import healthRouter from "./routes/health.routes";
+import managementRouter from "./routes/management.routes";
 import reportCategoryRouter from "./routes/report-category.routes";
 import reportRouter from "./routes/report.routes";
 
@@ -14,6 +16,8 @@ app.use(express.json());
 
 app.use("/api/health", healthRouter);
 app.use("/api/auth", authRouter);
+app.use("/api/admin", adminRouter);
+app.use("/api/management", managementRouter);
 app.use("/api/report-categories", reportCategoryRouter);
 app.use("/api/reports", reportRouter);
 

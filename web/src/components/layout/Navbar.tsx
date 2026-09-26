@@ -37,7 +37,7 @@ export function Navbar() {
           <div className="flex items-center gap-3 sm:gap-5">
             {isAuthenticated && user ? (
               <>
-                <Link href="/dashboard" className="text-sm font-medium text-slate-700 hover:text-emerald-700">
+                <Link href={user.role === "ADMIN" ? "/admin" : "/dashboard"} className="text-sm font-medium text-slate-700 hover:text-emerald-700">
                   Dashboard
                 </Link>
                 {user.role === "CITIZEN" && (
@@ -54,6 +54,13 @@ export function Navbar() {
                   <Link href="/employee/reports" className="text-sm font-medium text-slate-700 hover:text-emerald-700">
                     Reports
                   </Link>
+                )}
+                {user.role === "ADMIN" && (
+                  <>
+                    <Link href="/admin/users" className="hidden text-sm font-medium text-slate-700 hover:text-emerald-700 lg:block">Users</Link>
+                    <Link href="/admin/departments" className="hidden text-sm font-medium text-slate-700 hover:text-emerald-700 xl:block">Departments</Link>
+                    <Link href="/admin/categories" className="hidden text-sm font-medium text-slate-700 hover:text-emerald-700 xl:block">Categories</Link>
+                  </>
                 )}
                 <div className="hidden border-l border-slate-200 pl-5 text-right sm:block">
                   <p className="text-sm font-semibold text-slate-900">{user.firstName}</p>

@@ -95,3 +95,23 @@ export function StaffRoute({ children }: { children: ReactNode }) {
     </ProtectedRoute>
   );
 }
+
+export function AdminRoute({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
+
+  return (
+    <ProtectedRoute>
+      {user?.role === "ADMIN" ? (
+        children
+      ) : (
+        <main className="mx-auto flex min-h-[70vh] max-w-xl items-center px-6 text-center">
+          <section className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+            <h1 className="text-2xl font-bold text-slate-950">Access denied</h1>
+            <p className="mt-3 text-sm leading-6 text-slate-600">Administrator access is required to manage Cityzen municipality settings.</p>
+            <Link href="/dashboard" className="mt-6 inline-flex rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600">Return to Dashboard</Link>
+          </section>
+        </main>
+      )}
+    </ProtectedRoute>
+  );
+}
