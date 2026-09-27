@@ -1,3 +1,5 @@
+import { UserRole } from "@prisma/client";
+
 import database from "../config/database";
 import type { DepartmentInput, DepartmentUpdate } from "../types/admin.types";
 import { AppError } from "../utils/app-error";
@@ -12,9 +14,12 @@ const departmentSelect = {
   _count: { select: { employees: true, reports: true } },
 } as const;
 
-export async function listManagementDepartments() {
+export async function listManagementDepartments(headUserId?: number) {
   return database.department.findMany({
-    where: { isActive: true },
+    where: {
+      isActive: true,
+      employees: headUserId ? { some: { id: headUserId, role: UserRole.DEPARTMENT_HEAD } } : undefined,
+    },
     select: {
       id: true,
       name: true,

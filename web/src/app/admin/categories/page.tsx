@@ -6,16 +6,18 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { AdminRoute } from "@/components/auth/ProtectedRoute";
 import { ReportError, ReportLoading } from "@/components/reports/ReportStates";
 import { useAuth } from "@/context/AuthContext";
-import { createCategory, getAdminCategories, updateCategory } from "@/lib/admin";
+import { createCategory, getAdminCategories, getAdminDepartments, updateCategory } from "@/lib/admin";
 import { ApiError } from "@/lib/api";
 import type { AdminCategory } from "@/types/admin";
+import type { Department } from "@/types/department";
 
-const emptyForm = { name: "", description: "", icon: "" };
+const emptyForm = { name: "", description: "", icon: "", departmentId: "" };
 
 function CategoriesContent() {
   const router = useRouter();
   const { logout } = useAuth();
   const [categories, setCategories] = useState<AdminCategory[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [editing, setEditing] = useState<AdminCategory | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [isLoading, setIsLoading] = useState(true);
@@ -47,8 +49,13 @@ function CategoriesContent() {
 
   useEffect(() => {
     let active = true;
-    void getAdminCategories()
-      .then((response) => { if (active) setCategories(response.categories); })
+    void Promise.all([getAdminCategories(), getAdminDepartments(true)])
+      .then(([categoryResponse, departmentResponse]) => {
+        if (active) {
+          setCategories(categoryResponse.categories);
+          setDepartments(departmentResponse.departments);
+        }
+      })
       .catch((caught: unknown) => { if (active) handleError(caught); })
       .finally(() => { if (active) setIsLoading(false); });
     return () => { active = false; };
@@ -56,7 +63,7 @@ function CategoriesContent() {
 
   function startEditing(category: AdminCategory) {
     setEditing(category);
-    setForm({ name: category.name, description: category.description ?? "", icon: category.icon ?? "" });
+    setForm({ name: category.name, description: category.description ?? "", icon: category.icon ?? "", departmentId: category.department ? String(category.department.id) : "" });
     setError("");
     setSuccess("");
   }
@@ -68,8 +75,8 @@ function CategoriesContent() {
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!form.name.trim()) {
-      setError("Category name is required.");
+    if (!form.name.trim() || !form.departmentId) {
+      setError("Category name and department are required.");
       return;
     }
     setIsSaving(true);
@@ -80,6 +87,7 @@ function CategoriesContent() {
         name: form.name.trim(),
         description: form.description.trim() || null,
         icon: form.icon.trim() || null,
+        departmentId: Number(form.departmentId),
       };
       const response = editing
         ? await updateCategory(editing.id, data)
@@ -141,6 +149,7 @@ function CategoriesContent() {
                         <StatusBadge active={category.isActive} />
                       </div>
                       <p className="mt-2 text-sm text-slate-600">{category.description || "No description"}</p>
+                      <p className="mt-2 text-sm font-medium text-slate-700">Department: {category.department?.name ?? "Not configured"}</p>
                       <p className="mt-3 text-xs text-slate-500">{category._count?.reports ?? 0} reports</p>
                     </div>
                     <div className="flex gap-2 self-start">
@@ -161,6 +170,14 @@ function CategoriesContent() {
           <form onSubmit={submit} className="mt-5 space-y-4">
             <TextField id="category-name" label="Name" value={form.name} maxLength={100} required onChange={(value) => setForm((current) => ({ ...current, name: value }))} />
             <TextField id="category-icon" label="Icon" value={form.icon} maxLength={100} placeholder="Optional symbol or icon name" onChange={(value) => setForm((current) => ({ ...current, icon: value }))} />
+            <div>
+              <label htmlFor="category-department" className={labelStyle}>Department</label>
+              <select id="category-department" required value={form.departmentId} onChange={(event) => setForm((current) => ({ ...current, departmentId: event.target.value }))} className={inputStyle}>
+                <option value="">Select a department</option>
+                {departments.map((department) => <option key={department.id} value={department.id}>{department.name}</option>)}
+              </select>
+              <p className="mt-1 text-xs text-slate-500">New reports in this category are routed to this department.</p>
+            </div>
             <div>
               <label htmlFor="category-description" className={labelStyle}>Description</label>
               <textarea id="category-description" rows={4} maxLength={180} value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} className={inputStyle} />

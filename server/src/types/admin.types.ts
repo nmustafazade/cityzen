@@ -24,6 +24,7 @@ export interface CategoryInput {
   name: string;
   description?: string | null;
   icon?: string | null;
+  departmentId: number;
 }
 
 export interface CategoryUpdate {
@@ -31,4 +32,5 @@ export interface CategoryUpdate {
   description?: string | null;
   icon?: string | null;
   isActive?: boolean;
+  departmentId?: number | null;
 }

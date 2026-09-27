@@ -15,7 +15,7 @@ import type { Department } from "@/types/department";
 import type { UserRole } from "@/types/user";
 
 const defaultPagination: AdminPagination = { page: 1, limit: 10, total: 0, totalPages: 0 };
-const roleLabels: Record<UserRole, string> = { CITIZEN: "Citizen", EMPLOYEE: "Employee", ADMIN: "Admin" };
+const roleLabels: Record<UserRole, string> = { CITIZEN: "Citizen", EMPLOYEE: "Employee", DEPARTMENT_HEAD: "Department Head", ADMIN: "Admin" };
 
 function AdminUsersContent() {
   const router = useRouter(); const { logout } = useAuth();
@@ -39,7 +39,7 @@ function AdminUsersContent() {
 
   return <main className="mx-auto w-full max-w-7xl flex-1 px-6 py-10 sm:py-14"><div><p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-700">Administration</p><h1 className="mt-2 text-3xl font-bold text-slate-950 sm:text-4xl">Users</h1><p className="mt-3 text-slate-600">Manage citizen and municipality accounts.</p></div>
     <section className="mt-8 grid gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:grid-cols-2 lg:grid-cols-4">
-      <Select label="Role" value={role} onChange={(value) => filter(() => setRole(value as UserRole | ""))}><option value="">All Roles</option><option value="CITIZEN">Citizen</option><option value="EMPLOYEE">Employee</option><option value="ADMIN">Admin</option></Select>
+      <Select label="Role" value={role} onChange={(value) => filter(() => setRole(value as UserRole | ""))}><option value="">All Roles</option><option value="CITIZEN">Citizen</option><option value="EMPLOYEE">Employee</option><option value="DEPARTMENT_HEAD">Department Head</option><option value="ADMIN">Admin</option></Select>
       <Select label="Status" value={status} onChange={(value) => filter(() => setStatus(value))}><option value="">All Statuses</option><option value="active">Active</option><option value="inactive">Inactive</option></Select>
       <Select label="Department" value={departmentId} onChange={(value) => filter(() => setDepartmentId(value))}><option value="">All Departments</option>{departments.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</Select>
       <form onSubmit={submitSearch}><label htmlFor="user-search" className="mb-1.5 block text-sm font-semibold text-slate-800">Search</label><div className="flex"><input id="user-search" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} placeholder="Name or email" className="min-w-0 flex-1 rounded-l-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-emerald-600"/><button className="rounded-r-lg bg-emerald-600 px-3 text-sm font-semibold text-white">Search</button></div></form>

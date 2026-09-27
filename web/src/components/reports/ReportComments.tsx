@@ -13,6 +13,7 @@ import type { UserRole } from "@/types/user";
 const roleLabels: Record<UserRole, string> = {
   CITIZEN: "Citizen",
   EMPLOYEE: "Municipality Employee",
+  DEPARTMENT_HEAD: "Department Head",
   ADMIN: "Administrator",
 };
 

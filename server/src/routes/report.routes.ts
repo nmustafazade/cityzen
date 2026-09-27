@@ -31,7 +31,7 @@ reportRouter.post("/", authorizeRoles(UserRole.CITIZEN), create);
 reportRouter.get("/my", authorizeRoles(UserRole.CITIZEN), myReports);
 reportRouter.get(
   "/",
-  authorizeRoles(UserRole.EMPLOYEE, UserRole.ADMIN),
+  authorizeRoles(UserRole.EMPLOYEE, UserRole.DEPARTMENT_HEAD, UserRole.ADMIN),
   index,
 );
 reportRouter.get("/:id", byId);
@@ -50,12 +50,12 @@ reportRouter.post(
 reportRouter.patch("/:id/cancel", authorizeRoles(UserRole.CITIZEN), cancel);
 reportRouter.patch(
   "/:id/status",
-  authorizeRoles(UserRole.EMPLOYEE, UserRole.ADMIN),
+  authorizeRoles(UserRole.EMPLOYEE, UserRole.DEPARTMENT_HEAD, UserRole.ADMIN),
   changeStatus,
 );
 reportRouter.patch(
   "/:id/assign",
-  authorizeRoles(UserRole.EMPLOYEE, UserRole.ADMIN),
+  authorizeRoles(UserRole.DEPARTMENT_HEAD, UserRole.ADMIN),
   assign,
 );
 

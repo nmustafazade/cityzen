@@ -1,9 +1,10 @@
-import { ReportStatus, UserRole } from "@prisma/client";
+import { NotificationType, ReportStatus, UserRole } from "@prisma/client";
 
 import database from "../config/database";
 import type { AuthenticatedUser } from "../types/auth.types";
 import type { FeedbackInput } from "../types/report-interaction.types";
 import { AppError } from "../utils/app-error";
+import { createNotification } from "./notification.service";
 
 const commentUserSelect = {
   id: true,
@@ -29,17 +30,30 @@ const commentSelect = {
 } as const;
 
 async function visibleReport(reportId: number, authenticatedUser: AuthenticatedUser) {
-  const report = await database.report.findUnique({
-    where: { id: reportId },
-    select: { id: true, citizenId: true, status: true },
+  const user = authenticatedUser.role === UserRole.DEPARTMENT_HEAD
+    ? await database.user.findUnique({
+        where: { id: authenticatedUser.userId },
+        select: { departmentId: true },
+      })
+    : null;
+  const report = await database.report.findFirst({
+    where: {
+      id: reportId,
+      citizenId: authenticatedUser.role === UserRole.CITIZEN ? authenticatedUser.userId : undefined,
+      assignedEmployeeId: authenticatedUser.role === UserRole.EMPLOYEE ? authenticatedUser.userId : undefined,
+      departmentId: authenticatedUser.role === UserRole.DEPARTMENT_HEAD
+        ? user?.departmentId ?? -1
+        : undefined,
+    },
+    select: {
+      id: true,
+      citizenId: true,
+      assignedEmployeeId: true,
+      title: true,
+      status: true,
+    },
   });
   if (!report) throw new AppError(404, "Report not found");
-  if (
-    authenticatedUser.role === UserRole.CITIZEN &&
-    report.citizenId !== authenticatedUser.userId
-  ) {
-    throw new AppError(403, "You do not have permission to access this report");
-  }
   return report;
 }
 
@@ -58,7 +72,7 @@ export async function createReportComment(
   content: string,
   parentCommentId?: number,
 ) {
-  await visibleReport(reportId, authenticatedUser);
+  const report = await visibleReport(reportId, authenticatedUser);
   if (parentCommentId) {
     const parentComment = await database.reportComment.findFirst({
       where: { id: parentCommentId, reportId },
@@ -66,9 +80,32 @@ export async function createReportComment(
     });
     if (!parentComment) throw new AppError(400, "Reply target does not belong to this report");
   }
-  return database.reportComment.create({
-    data: { reportId, userId: authenticatedUser.userId, content: content.trim(), parentCommentId },
-    select: commentSelect,
+  return database.$transaction(async (transaction) => {
+    const comment = await transaction.reportComment.create({
+      data: { reportId, userId: authenticatedUser.userId, content: content.trim(), parentCommentId },
+      select: commentSelect,
+    });
+    const actorName = `${comment.user.firstName} ${comment.user.lastName}`;
+    if (authenticatedUser.role === UserRole.CITIZEN && report.assignedEmployeeId) {
+      await createNotification({
+        userId: report.assignedEmployeeId,
+        actorId: authenticatedUser.userId,
+        reportId,
+        type: NotificationType.REPORT_COMMENT,
+        title: "New citizen comment",
+        message: `${actorName} commented on report #${report.id}.`,
+      }, transaction);
+    } else if (authenticatedUser.role !== UserRole.CITIZEN) {
+      await createNotification({
+        userId: report.citizenId,
+        actorId: authenticatedUser.userId,
+        reportId,
+        type: NotificationType.REPORT_COMMENT,
+        title: "New municipality comment",
+        message: `${actorName} commented on your report "${report.title}".`,
+      }, transaction);
+    }
+    return comment;
   });
 }
 

@@ -12,6 +12,7 @@ const categorySelect = {
   isActive: true,
   createdAt: true,
   updatedAt: true,
+  department: { select: { id: true, name: true, isActive: true } },
   _count: { select: { reports: true } },
 } as const;
 
@@ -34,11 +35,13 @@ async function ensureUniqueCategoryName(name: string, excludeId?: number) {
 export async function createCategory(input: CategoryInput) {
   const name = input.name.trim();
   await ensureUniqueCategoryName(name);
+  await ensureActiveDepartment(input.departmentId);
   return database.reportCategory.create({
     data: {
       name,
       description: input.description?.trim() || null,
       icon: input.icon?.trim() || null,
+      departmentId: input.departmentId,
     },
     select: categorySelect,
   });
@@ -49,6 +52,9 @@ export async function updateCategory(id: number, input: CategoryUpdate) {
   if (!current) throw new AppError(404, "Report category not found");
   const name = input.name?.trim();
   if (name) await ensureUniqueCategoryName(name, id);
+  if (input.departmentId !== undefined && input.departmentId !== null) {
+    await ensureActiveDepartment(input.departmentId);
+  }
   return database.reportCategory.update({
     where: { id },
     data: {
@@ -56,9 +62,18 @@ export async function updateCategory(id: number, input: CategoryUpdate) {
       description: input.description === undefined ? undefined : input.description?.trim() || null,
       icon: input.icon === undefined ? undefined : input.icon?.trim() || null,
       isActive: input.isActive,
+      departmentId: input.departmentId,
     },
     select: categorySelect,
   });
+}
+
+async function ensureActiveDepartment(departmentId: number) {
+  const department = await database.department.findFirst({
+    where: { id: departmentId, isActive: true },
+    select: { id: true },
+  });
+  if (!department) throw new AppError(400, "Department does not exist or is inactive");
 }
 
 export async function getAdminStats() {
@@ -66,6 +81,7 @@ export async function getAdminStats() {
     totalUsers,
     citizens,
     employees,
+    departmentHeads,
     admins,
     totalReports,
     submitted,
@@ -79,6 +95,7 @@ export async function getAdminStats() {
     database.user.count(),
     database.user.count({ where: { role: UserRole.CITIZEN } }),
     database.user.count({ where: { role: UserRole.EMPLOYEE } }),
+    database.user.count({ where: { role: UserRole.DEPARTMENT_HEAD } }),
     database.user.count({ where: { role: UserRole.ADMIN } }),
     database.report.count(),
     database.report.count({ where: { status: ReportStatus.SUBMITTED } }),
@@ -90,7 +107,7 @@ export async function getAdminStats() {
     database.reportCategory.count({ where: { isActive: true } }),
   ]);
   return {
-    users: { total: totalUsers, citizens, employees, admins },
+    users: { total: totalUsers, citizens, employees, departmentHeads, admins },
     reports: { total: totalReports, submitted, inProgress, resolved },
     departments: { total: totalDepartments, active: activeDepartments },
     categories: { total: totalCategories, active: activeCategories },

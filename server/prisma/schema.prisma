@@ -10,6 +10,7 @@ datasource db {
 enum UserRole {
   CITIZEN
   EMPLOYEE
+  DEPARTMENT_HEAD
   ADMIN
 }
 
@@ -28,6 +29,14 @@ enum ReportPriority {
   MEDIUM
   HIGH
   URGENT
+}
+
+enum NotificationType {
+  REPORT_CREATED
+  REPORT_ASSIGNED
+  REPORT_STATUS_CHANGED
+  REPORT_COMMENT
+  REPORT_RESOLVED
 }
 
 model User {
@@ -52,20 +61,23 @@ model User {
   reportComments   ReportComment[]
   reportUpvotes    ReportUpvote[]
   reportFeedbacks  ReportFeedback[]      @relation("CitizenReportFeedback")
+  notifications    Notification[]        @relation("NotificationRecipient")
+  notificationActs Notification[]        @relation("NotificationActor")
 
   @@index([role])
   @@index([departmentId])
 }
 
 model Department {
-  id          Int      @id @default(autoincrement())
-  name        String   @unique
+  id          Int              @id @default(autoincrement())
+  name        String           @unique
   description String?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  isActive    Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
   employees   User[]
   reports     Report[]
+  categories  ReportCategory[]
 }
 
 model Address {
@@ -98,14 +110,18 @@ model SystemHealth {
 }
 
 model ReportCategory {
-  id          Int      @id @default(autoincrement())
-  name        String   @unique
-  description String?
-  icon        String?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  reports     Report[]
+  id           Int         @id @default(autoincrement())
+  name         String      @unique
+  description  String?
+  icon         String?
+  isActive     Boolean     @default(true)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  departmentId Int?
+  department   Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  reports      Report[]
+
+  @@index([departmentId])
 }
 
 model Report {
@@ -133,6 +149,7 @@ model Report {
   comments           ReportComment[]
   upvotes            ReportUpvote[]
   feedback           ReportFeedback?
+  notifications      Notification[]
 
   @@index([citizenId, createdAt])
   @@index([categoryId])
@@ -212,4 +229,25 @@ model ReportFeedback {
   citizen   User     @relation("CitizenReportFeedback", fields: [citizenId], references: [id], onDelete: Restrict)
 
   @@index([citizenId])
+}
+
+model Notification {
+  id        Int              @id @default(autoincrement())
+  userId    Int
+  type      NotificationType
+  title     String
+  message   String
+  reportId  Int?
+  actorId   Int?
+  isRead    Boolean          @default(false)
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+  user      User             @relation("NotificationRecipient", fields: [userId], references: [id], onDelete: Restrict)
+  report    Report?          @relation(fields: [reportId], references: [id], onDelete: SetNull)
+  actor     User?            @relation("NotificationActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([userId, isRead])
+  @@index([createdAt])
+  @@index([reportId])
 }

@@ -7,7 +7,7 @@ export interface ManagementEmployee {
   firstName: string;
   lastName: string;
   email: string;
-  role: Extract<UserRole, "EMPLOYEE" | "ADMIN">;
+  role: Extract<UserRole, "EMPLOYEE">;
   profileImageUrl: string | null;
   department: Pick<Department, "id" | "name" | "isActive"> | null;
 }

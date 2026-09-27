@@ -23,7 +23,7 @@ export async function listManagementEmployees(departmentId?: number) {
   return database.user.findMany({
     where: {
       isActive: true,
-      role: { in: [UserRole.EMPLOYEE, UserRole.ADMIN] },
+      role: UserRole.EMPLOYEE,
       departmentId,
     },
     select: {
@@ -105,10 +105,18 @@ export async function updateUserRole(id: number, currentAdminId: number, role: U
   if (id === currentAdminId && role !== UserRole.ADMIN) {
     throw new AppError(400, "You cannot remove your own administrator role");
   }
-  return database.user.update({
-    where: { id },
-    data: { role, departmentId: role === UserRole.CITIZEN ? null : undefined },
-    select: safeUserSelect,
+  return database.$transaction(async (transaction) => {
+    if (role !== UserRole.EMPLOYEE) {
+      await transaction.report.updateMany({
+        where: { assignedEmployeeId: id },
+        data: { assignedEmployeeId: null },
+      });
+    }
+    return transaction.user.update({
+      where: { id },
+      data: { role, departmentId: role === UserRole.CITIZEN ? null : undefined },
+      select: safeUserSelect,
+    });
   });
 }
 
@@ -134,9 +142,20 @@ export async function updateUserDepartment(id: number, departmentId: number | nu
     });
     if (!department) throw new AppError(400, "Department does not exist or is inactive");
   }
-  return database.user.update({
-    where: { id },
-    data: { departmentId },
-    select: safeUserSelect,
+  return database.$transaction(async (transaction) => {
+    if (user.role === UserRole.EMPLOYEE) {
+      await transaction.report.updateMany({
+        where: {
+          assignedEmployeeId: id,
+          departmentId: departmentId === null ? undefined : { not: departmentId },
+        },
+        data: { assignedEmployeeId: null },
+      });
+    }
+    return transaction.user.update({
+      where: { id },
+      data: { departmentId },
+      select: safeUserSelect,
+    });
   });
 }

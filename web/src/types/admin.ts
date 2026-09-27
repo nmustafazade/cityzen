@@ -51,7 +51,7 @@ export interface AdminUserFilters {
 }
 
 export interface AdminStats {
-  users: { total: number; citizens: number; employees: number; admins: number };
+  users: { total: number; citizens: number; employees: number; departmentHeads: number; admins: number };
   reports: { total: number; submitted: number; inProgress: number; resolved: number };
   departments: { total: number; active: number };
   categories: { total: number; active: number };
@@ -61,14 +61,20 @@ export interface AdminCategory extends ReportCategory {
   createdAt: string;
   updatedAt: string;
   _count?: { reports: number };
+  department: Pick<Department, "id" | "name" | "isActive"> | null;
 }
 
 export interface CategoryInput {
   name: string;
   description?: string | null;
   icon?: string | null;
+  departmentId: number;
 }
 
-export interface CategoryUpdate extends Partial<CategoryInput> {
+export interface CategoryUpdate {
+  name?: string;
+  description?: string | null;
+  icon?: string | null;
   isActive?: boolean;
+  departmentId?: number | null;
 }

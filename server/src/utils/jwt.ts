@@ -40,7 +40,7 @@ export function verifyAuthToken(token: string): AuthenticatedUser {
     typeof payload === "string" ||
     typeof payload.userId !== "number" ||
     typeof payload.role !== "string" ||
-    !["CITIZEN", "EMPLOYEE", "ADMIN"].includes(payload.role)
+    !["CITIZEN", "EMPLOYEE", "DEPARTMENT_HEAD", "ADMIN"].includes(payload.role)
   ) {
     throw new Error("Invalid token payload");
   }

@@ -27,7 +27,8 @@ const profileImageLoader: ImageLoader = ({ src }) => src;
 
 function EmployeeReportDetailContent({ reportId }: { reportId: string }) {
   const router = useRouter();
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
+  const canAssign = user?.role === "ADMIN" || user?.role === "DEPARTMENT_HEAD";
   const numericId = Number(reportId);
   const [report, setReport] = useState<Report | null>(null);
   const [newStatus, setNewStatus] = useState<ReportStatus | "">("");
@@ -107,12 +108,13 @@ function EmployeeReportDetailContent({ reportId }: { reportId: string }) {
   }, [handleApiError, numericId]);
 
   useEffect(() => {
+    if (!canAssign) return;
     let isCurrent = true;
     void getManagementDepartments()
       .then((response) => { if (isCurrent) setDepartments(response.departments); })
       .catch((caughtError: unknown) => { if (isCurrent) handleApiError(caughtError, "Unable to load departments."); });
     return () => { isCurrent = false; };
-  }, [handleApiError]);
+  }, [canAssign, handleApiError]);
 
   async function handleDepartmentChange(value: string) {
     setDepartmentId(value);
@@ -191,6 +193,7 @@ function EmployeeReportDetailContent({ reportId }: { reportId: string }) {
   if (error && !report) return <PageContainer><ReportError message={error} onRetry={() => void loadReport()} /></PageContainer>;
   if (!report) return <PageContainer><ReportError message="Report not found." onRetry={() => void loadReport()} /></PageContainer>;
   const reportCoordinates = coordinatesFromValues(report.latitude, report.longitude);
+  const canChangeStatus = user?.role === "ADMIN" || user?.role === "DEPARTMENT_HEAD" || report.assignedEmployee?.id === user?.id;
 
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-10 sm:py-14">
@@ -256,7 +259,7 @@ function EmployeeReportDetailContent({ reportId }: { reportId: string }) {
               <DetailItem label="Department" value={report.department?.name ?? "Not assigned"} />
               <DetailItem label="Assigned employee" value={report.assignedEmployee ? `${report.assignedEmployee.firstName} ${report.assignedEmployee.lastName}` : "Not assigned"} />
             </dl>
-            <form onSubmit={handleAssignment} className="mt-6 space-y-4 border-t border-slate-100 pt-5">
+            {canAssign && <form onSubmit={handleAssignment} className="mt-6 space-y-4 border-t border-slate-100 pt-5">
               <div>
                 <label htmlFor="assignment-department" className="mb-1.5 block text-sm font-semibold text-slate-800">Department</label>
                 <select id="assignment-department" value={departmentId} onChange={(event) => void handleDepartmentChange(event.target.value)} disabled={isAssigning} className={inputStyle}>
@@ -275,12 +278,12 @@ function EmployeeReportDetailContent({ reportId }: { reportId: string }) {
               <button type="submit" disabled={!departmentId || !employeeId || isAssigning} className="w-full rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 disabled:cursor-not-allowed disabled:bg-emerald-400">
                 {isAssigning ? "Assigning..." : "Assign Report"}
               </button>
-            </form>
+            </form>}
           </Section>
 
           <Section title="Status Management">
             <p className="text-sm text-slate-600">Current status: <span className="font-semibold text-slate-900">{reportStatusLabels[report.status]}</span></p>
-            <form onSubmit={handleStatusUpdate} className="mt-5 space-y-4">
+            {canChangeStatus ? <form onSubmit={handleStatusUpdate} className="mt-5 space-y-4">
               <div>
                 <label htmlFor="new-status" className="mb-1.5 block text-sm font-semibold text-slate-800">New Status</label>
                 <select id="new-status" value={newStatus} onChange={(event) => { setNewStatus(event.target.value as ReportStatus | ""); setSuccessMessage(""); }} disabled={isUpdating} className={inputStyle}>
@@ -296,7 +299,7 @@ function EmployeeReportDetailContent({ reportId }: { reportId: string }) {
               <button type="submit" disabled={!newStatus || isUpdating} className="w-full rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 disabled:cursor-not-allowed disabled:bg-emerald-400">
                 {isUpdating ? "Updating..." : "Update Status"}
               </button>
-            </form>
+            </form> : <p className="mt-4 text-sm text-slate-500">Only the assigned employee, department head, or an administrator can change this status.</p>}
           </Section>
         </aside>
       </div>

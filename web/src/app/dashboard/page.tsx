@@ -17,6 +17,11 @@ const dashboardCards: Record<UserRole, { title: string; description: string; hre
     { title: "Report Management", description: "Coordinate and update municipal reports.", href: "/employee/reports" },
     { title: "Department", description: "View your department workspace." },
   ],
+  DEPARTMENT_HEAD: [
+    { title: "Department Reports", description: "Review issues routed to your department.", href: "/employee/reports" },
+    { title: "Assign Reports", description: "Assign department issues to your employees.", href: "/employee/reports" },
+    { title: "Department", description: "Coordinate your municipal team." },
+  ],
   ADMIN: [
     { title: "Reports", description: "Oversee city issue reporting activity.", href: "/employee/reports" },
     { title: "Users", description: "Manage citizen and municipality accounts." },
@@ -24,7 +29,7 @@ const dashboardCards: Record<UserRole, { title: string; description: string; hre
   ],
 };
 
-const roleLabels: Record<UserRole, string> = { CITIZEN: "Citizen", EMPLOYEE: "Employee", ADMIN: "Admin" };
+const roleLabels: Record<UserRole, string> = { CITIZEN: "Citizen", EMPLOYEE: "Employee", DEPARTMENT_HEAD: "Department Head", ADMIN: "Admin" };
 
 function DashboardContent() {
   const { user } = useAuth();

@@ -15,6 +15,7 @@ export interface ReportCategory {
   description?: string | null;
   icon?: string | null;
   isActive: boolean;
+  department?: { id: number; name: string } | null;
 }
 
 export interface ReportImage {

@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 
+import database from "../config/database";
 import { verifyAuthToken } from "../utils/jwt";
 
 export function authenticate(
@@ -27,13 +28,26 @@ export function authenticate(
     return;
   }
 
+  let tokenUser;
   try {
-    request.user = verifyAuthToken(token);
-    next();
+    tokenUser = verifyAuthToken(token);
   } catch {
     response.status(401).json({
       status: "error",
       message: "Invalid or expired token",
     });
+    return;
   }
+
+  void database.user.findUnique({
+    where: { id: tokenUser.userId },
+    select: { id: true, role: true, isActive: true },
+  }).then((user) => {
+    if (!user?.isActive) {
+      response.status(401).json({ status: "error", message: "Authentication required" });
+      return;
+    }
+    request.user = { userId: user.id, role: user.role };
+    next();
+  }).catch(next);
 }

@@ -74,7 +74,7 @@ function optionalText(value: unknown, field: string, maxLength = 180): string | 
 function parseRole(value: unknown, optional = false): UserRole | undefined {
   if (optional && value === undefined) return undefined;
   if (typeof value !== "string" || !roles.includes(value as UserRole)) {
-    throw new AppError(400, "role must be CITIZEN, EMPLOYEE, or ADMIN");
+    throw new AppError(400, "role must be CITIZEN, EMPLOYEE, DEPARTMENT_HEAD, or ADMIN");
   }
   return value as UserRole;
 }
@@ -181,6 +181,7 @@ export async function createCategoryHandler(request: Request, response: Response
       name: requiredName(body.name),
       description: optionalText(body.description, "description"),
       icon: optionalText(body.icon, "icon", 100),
+      departmentId: positiveInteger(body.departmentId, "departmentId"),
     };
     response.status(201).json({ category: await createCategory(input) });
   } catch (error) { next(error); }
@@ -194,6 +195,11 @@ export async function updateCategoryHandler(request: Request, response: Response
       description: optionalText(body.description, "description"),
       icon: optionalText(body.icon, "icon", 100),
       isActive: optionalBoolean(body.isActive, "isActive"),
+      departmentId: body.departmentId === undefined
+        ? undefined
+        : body.departmentId === null
+          ? null
+          : positiveInteger(body.departmentId, "departmentId"),
     };
     if (Object.values(input).every((value) => value === undefined)) throw new AppError(400, "At least one field is required");
     response.json({ category: await updateCategory(positiveInteger(request.params.id, "category id"), input) });

@@ -73,7 +73,9 @@ Verify the connection at [http://localhost:5051/api/health/database](http://loca
 
 ### Current database schema
 
-The core entities are `User`, `Department`, `Address`, and `SystemHealth`. Users support the `CITIZEN`, `EMPLOYEE`, and `ADMIN` roles.
+The core entities are `User`, `Department`, `Address`, and `SystemHealth`. Users support the `CITIZEN`, `EMPLOYEE`, `DEPARTMENT_HEAD`, and `ADMIN` roles.
+
+Report categories are assigned to departments by an administrator. New reports are automatically routed to the category's department and notify its active department heads. Department heads can view their department's reports and assign only employees from that department. Regular employees can access and update only reports assigned to them; administrators retain city-wide access.
 
 ## Authentication
 
@@ -104,6 +106,15 @@ Authorization: Bearer <token>
 - `DELETE /api/reports/:reportId/comments/:commentId` — delete an authorized comment
 - `POST /api/reports/:id/upvote` — toggle citizen support for an owned report
 - `GET|PUT /api/reports/:id/feedback` — view or save resolution feedback
+
+## In-app notifications
+
+- `GET /api/notifications` — list the authenticated user's notifications
+- `GET /api/notifications/unread-count` — fetch the unread badge count
+- `PATCH /api/notifications/:id/read` — mark one owned notification as read
+- `PATCH /api/notifications/read-all` — mark all owned notifications as read
+
+Notifications are created for report assignments, status changes, resolutions, and relevant comments. The authenticated web app polls only the lightweight unread-count endpoint every 30 seconds; notification history is persistent and paginated.
 
 ### Development image storage
 

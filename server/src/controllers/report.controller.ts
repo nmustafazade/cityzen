@@ -213,7 +213,7 @@ export async function index(
       sortBy: sortBy as ManageReportFilters["sortBy"],
       sortOrder: sortOrder as ManageReportFilters["sortOrder"],
     };
-    response.json(await listReports(filters));
+    response.json(await listReports(authenticatedUser(request), filters));
   } catch (error) { next(error); }
 }
 
@@ -233,7 +233,7 @@ export async function changeStatus(
     response.json({
       report: await changeReportStatus(
         positiveInteger(request.params.id, "report id"),
-        authenticatedUser(request).userId,
+        authenticatedUser(request),
         input,
       ),
     });
@@ -257,7 +257,7 @@ export async function assign(
     response.json({
       report: await assignReport(
         positiveInteger(request.params.id, "report id"),
-        authenticatedUser(request).userId,
+        authenticatedUser(request),
         input,
       ),
     });

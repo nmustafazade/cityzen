@@ -73,7 +73,7 @@ export function CitizenRoute({ children }: { children: ReactNode }) {
 
 export function StaffRoute({ children }: { children: ReactNode }) {
   const { user } = useAuth();
-  const isStaff = user?.role === "EMPLOYEE" || user?.role === "ADMIN";
+  const isStaff = user?.role === "EMPLOYEE" || user?.role === "DEPARTMENT_HEAD" || user?.role === "ADMIN";
 
   return (
     <ProtectedRoute>
@@ -84,7 +84,7 @@ export function StaffRoute({ children }: { children: ReactNode }) {
           <section className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
             <h1 className="text-2xl font-bold text-slate-950">Access denied</h1>
             <p className="mt-3 text-sm leading-6 text-slate-600">
-              Report management is available to municipality employee and administrator accounts.
+              Report management is available to municipality employees, department heads, and administrators.
             </p>
             <Link href="/dashboard" className="mt-6 inline-flex rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600">
               Return to Dashboard
