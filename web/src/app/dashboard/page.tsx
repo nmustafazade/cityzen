@@ -14,6 +14,9 @@ const dashboardCards: Record<UserRole, { title: string; description: string; hre
     { title: "My Service Requests", description: "Track your submitted municipal service requests.", href: "/my-services" },
     { title: "Announcements", description: "Read official city and department updates.", href: "/announcements" },
     { title: "Events", description: "Find upcoming activities across the city.", href: "/events" },
+    { title: "City Map", description: "Explore roads, parking and public facilities.", href: "/city-map" },
+    { title: "Parking", description: "Find spaces and manage reservations.", href: "/parking" },
+    { title: "City Facilities", description: "Discover public amenities nearby.", href: "/facilities" },
   ],
   EMPLOYEE: [
     { title: "Service Requests", description: "Process municipal service requests assigned to you.", href: "/municipality/service-requests" },
@@ -28,6 +31,7 @@ const dashboardCards: Record<UserRole, { title: string; description: string; hre
     { title: "Announcements", description: "Publish department announcements.", href: "/municipality/announcements" },
     { title: "Events", description: "Publish department events.", href: "/municipality/events" },
     { title: "Assign Reports", description: "Assign department reports to available employees.", href: "/employee/reports" },
+    { title: "Infrastructure", description: "Manage department roads, parking and facilities.", href: "/municipality/infrastructure" },
   ],
   ADMIN: [
     { title: "Service Requests", description: "Oversee municipal service requests city-wide.", href: "/municipality/service-requests" },
@@ -37,6 +41,7 @@ const dashboardCards: Record<UserRole, { title: string; description: string; hre
     { title: "Services", description: "Manage city service information.", href: "/municipality/services" },
     { title: "Announcements", description: "Manage citywide and department announcements.", href: "/municipality/announcements" },
     { title: "Events", description: "Manage citywide and department events.", href: "/municipality/events" },
+    { title: "Infrastructure", description: "Manage roads, parking and city facilities.", href: "/municipality/infrastructure" },
   ],
 };
 

@@ -12,6 +12,8 @@ import municipalityRouter, { announcementRouter, eventRouter, publicDepartmentRo
 import reportCategoryRouter from "./routes/report-category.routes";
 import reportRouter from "./routes/report.routes";
 import { municipalityServiceRequestRouter, serviceRequestRouter } from "./routes/service-request.routes";
+import { facilityCategoryAdminRouter, infrastructureRouter, municipalityInfrastructureRouter } from "./routes/infrastructure.routes";
+import parkingReservationRouter from "./routes/parking-reservation.routes";
 
 const app = express();
 
@@ -28,6 +30,7 @@ app.use(
 app.use("/api/health", healthRouter);
 app.use("/api/auth", authRouter);
 app.use("/api/admin", adminRouter);
+app.use("/api/admin/facility-categories", facilityCategoryAdminRouter);
 app.use("/api/management", managementRouter);
 app.use("/api/notifications", notificationRouter);
 app.use("/api/services", serviceRouter);
@@ -35,10 +38,13 @@ app.use("/api/announcements", announcementRouter);
 app.use("/api/events", eventRouter);
 app.use("/api/departments", publicDepartmentRouter);
 app.use("/api/municipality/service-requests", municipalityServiceRequestRouter);
+app.use("/api/municipality/infrastructure", municipalityInfrastructureRouter);
 app.use("/api/municipality", municipalityRouter);
 app.use("/api/report-categories", reportCategoryRouter);
 app.use("/api/reports", reportRouter);
 app.use("/api/service-requests", serviceRequestRouter);
+app.use("/api/infrastructure", infrastructureRouter);
+app.use("/api/parking-reservations", parkingReservationRouter);
 
 app.use(errorHandler);
 

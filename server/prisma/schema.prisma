@@ -53,6 +53,56 @@ enum ServiceRequestStatus {
   CANCELLED
 }
 
+enum RoadEventType {
+  ACCIDENT
+  ROAD_CLOSURE
+  CONSTRUCTION
+  MAINTENANCE
+  LANE_CLOSURE
+  FLOODING
+  CONGESTION
+  TEMPORARY_RESTRICTION
+  HAZARD
+  OTHER
+}
+
+enum RoadEventSeverity {
+  LOW
+  MODERATE
+  HIGH
+  CRITICAL
+}
+
+enum RoadEventStatus {
+  SCHEDULED
+  ACTIVE
+  RESOLVED
+  CANCELLED
+}
+
+enum ParkingFacilityType {
+  STREET
+  GARAGE
+  LOT
+  UNDERGROUND
+}
+
+enum ParkingReservationStatus {
+  RESERVED
+  ACTIVE
+  COMPLETED
+  CANCELLED
+  EXPIRED
+}
+
+enum InfrastructureDataSource {
+  MUNICIPALITY
+  OPENSTREETMAP
+  OPEN_DATA
+  HERE
+  DEMO
+}
+
 model User {
   id                      Int                           @id @default(autoincrement())
   firstName               String
@@ -82,25 +132,30 @@ model User {
   serviceRequests         ServiceRequest[]              @relation("CitizenServiceRequests")
   assignedServiceRequests ServiceRequest[]              @relation("AssignedServiceRequests")
   serviceRequestChanges   ServiceRequestStatusHistory[] @relation("ServiceRequestChangedBy")
+  createdRoadEvents       RoadEvent[]                   @relation("RoadEventCreator")
+  parkingReservations     ParkingReservation[]          @relation("CitizenParkingReservations")
 
   @@index([role])
   @@index([departmentId])
 }
 
 model Department {
-  id              Int                @id @default(autoincrement())
-  name            String             @unique
-  description     String?
-  isActive        Boolean            @default(true)
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
-  employees       User[]
-  reports         Report[]
-  categories      ReportCategory[]
-  services        MunicipalService[]
-  announcements   Announcement[]
-  cityEvents      CityEvent[]
-  serviceRequests ServiceRequest[]
+  id                Int                @id @default(autoincrement())
+  name              String             @unique
+  description       String?
+  isActive          Boolean            @default(true)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  employees         User[]
+  reports           Report[]
+  categories        ReportCategory[]
+  services          MunicipalService[]
+  announcements     Announcement[]
+  cityEvents        CityEvent[]
+  serviceRequests   ServiceRequest[]
+  roadEvents        RoadEvent[]
+  parkingFacilities ParkingFacility[]
+  cityFacilities    CityFacility[]
 }
 
 model Address {
@@ -391,4 +446,134 @@ model CityEvent {
   @@index([departmentId])
   @@index([isPublished, startsAt])
   @@index([startsAt])
+}
+
+model RoadEvent {
+  id               Int                      @id @default(autoincrement())
+  departmentId     Int
+  createdById      Int
+  title            String
+  description      String                   @db.Text
+  type             RoadEventType
+  severity         RoadEventSeverity
+  status           RoadEventStatus          @default(SCHEDULED)
+  address          String?
+  latitude         Decimal                  @db.Decimal(10, 7)
+  longitude        Decimal                  @db.Decimal(10, 7)
+  startsAt         DateTime
+  endsAt           DateTime?
+  isPublic         Boolean                  @default(true)
+  resolvedAt       DateTime?
+  source           InfrastructureDataSource @default(MUNICIPALITY)
+  externalSourceId String?
+  sourceUrl        String?
+  lastSyncedAt     DateTime?
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
+  department       Department               @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  createdBy        User                     @relation("RoadEventCreator", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@unique([source, externalSourceId])
+  @@index([departmentId, status])
+  @@index([isPublic, status, startsAt])
+  @@index([type, severity])
+  @@index([latitude, longitude])
+  @@index([source, lastSyncedAt])
+}
+
+model ParkingFacility {
+  id                  Int                      @id @default(autoincrement())
+  departmentId        Int
+  name                String
+  description         String?                  @db.Text
+  type                ParkingFacilityType
+  address             String
+  latitude            Decimal                  @db.Decimal(10, 7)
+  longitude           Decimal                  @db.Decimal(10, 7)
+  totalSpaces         Int
+  availableSpaces     Int?
+  accessibleSpaces    Int                      @default(0)
+  evChargingSpaces    Int                      @default(0)
+  hourlyPrice         Decimal?                 @db.Decimal(10, 2)
+  currency            String?
+  openingHours        String?
+  supportsReservation Boolean                  @default(false)
+  isActive            Boolean                  @default(true)
+  source              InfrastructureDataSource @default(MUNICIPALITY)
+  externalSourceId    String?
+  sourceUrl           String?
+  lastSyncedAt        DateTime?
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
+  department          Department               @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  reservations        ParkingReservation[]
+
+  @@unique([source, externalSourceId])
+  @@index([departmentId, isActive])
+  @@index([type, isActive])
+  @@index([latitude, longitude])
+  @@index([name])
+  @@index([source, lastSyncedAt])
+}
+
+model ParkingReservation {
+  id                Int                      @id @default(autoincrement())
+  parkingFacilityId Int
+  citizenId         Int
+  startsAt          DateTime
+  endsAt            DateTime
+  status            ParkingReservationStatus @default(RESERVED)
+  cancelledAt       DateTime?
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
+  parkingFacility   ParkingFacility          @relation(fields: [parkingFacilityId], references: [id], onDelete: Restrict)
+  citizen           User                     @relation("CitizenParkingReservations", fields: [citizenId], references: [id], onDelete: Restrict)
+
+  @@index([citizenId, createdAt])
+  @@index([parkingFacilityId, startsAt, endsAt])
+  @@index([status])
+}
+
+model CityFacilityCategory {
+  id          Int            @id @default(autoincrement())
+  name        String         @unique
+  icon        String?
+  description String?
+  isActive    Boolean        @default(true)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  facilities  CityFacility[]
+
+  @@index([isActive, name])
+}
+
+model CityFacility {
+  id               Int                      @id @default(autoincrement())
+  categoryId       Int
+  departmentId     Int?
+  name             String
+  description      String?                  @db.Text
+  address          String
+  latitude         Decimal                  @db.Decimal(10, 7)
+  longitude        Decimal                  @db.Decimal(10, 7)
+  phone            String?
+  email            String?
+  website          String?
+  openingHours     String?
+  isActive         Boolean                  @default(true)
+  source           InfrastructureDataSource @default(MUNICIPALITY)
+  externalSourceId String?
+  sourceUrl        String?
+  lastSyncedAt     DateTime?
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
+  category         CityFacilityCategory     @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  department       Department?              @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+
+  @@unique([source, externalSourceId])
+  @@index([categoryId, isActive])
+  @@index([departmentId, isActive])
+  @@index([latitude, longitude])
+  @@index([name])
+  @@index([source, lastSyncedAt])
 }

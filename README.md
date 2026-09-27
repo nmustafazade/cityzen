@@ -118,6 +118,41 @@ Notifications are created for report assignments, status changes, resolutions, a
 
 ## Municipal information
 
+## Urban Mobility & Infrastructure
+
+Cityzen includes municipality-managed road conditions, parking facilities and reservations, public city facilities, and a combined OpenStreetMap city map. Parking availability is municipality-provided and is not presented as live sensor data. Reservation capacity is calculated from overlapping reservations without permanently reducing the physical availability field.
+
+Public pages include `/city-map`, `/roads`, `/parking`, and `/facilities`. Department Heads manage only their department's infrastructure under `/municipality/infrastructure`; administrators have city-wide access and manage facility categories under `/admin/facility-categories`.
+
+### Open infrastructure data
+
+Parking, public facilities, and mapped roadworks can be imported from OpenStreetMap through the shared Overpass service. Configure a deliberately small bounding box in `server/.env`:
+
+```text
+OVERPASS_API_URL=https://overpass-api.de/api/interpreter
+OSM_IMPORT_SOUTH=40.35
+OSM_IMPORT_WEST=49.75
+OSM_IMPORT_NORTH=40.45
+OSM_IMPORT_EAST=49.95
+```
+
+The numbers above are examples only. Replace them with the south, west, north, and east coordinates for the city area you operate, then run:
+
+```bash
+cd server
+npm run import:osm-infrastructure
+```
+
+The command queries Overpass once, uses an identifiable `Cityzen/1.0 infrastructure-import` user agent, and caches the resulting parking, selected public amenities, and conservative roadwork records in MySQL. Repeated imports upsert by source and OSM element ID; they do not duplicate records or delete older imports after an incomplete response. Municipality-created records are never overwritten by OSM.
+
+Stored infrastructure records identify their source as Municipality, OpenStreetMap, Open Data, HERE, or Demo Data and retain their external ID, source link, and last synchronization time. OpenStreetMap content is attributed to © OpenStreetMap contributors.
+
+OpenStreetMap parking capacity and facility details may be incomplete. OSM does not normally provide trustworthy current parking availability, so imported parking displays “Live availability unavailable” instead of zero. Mapped OSM roadworks are not guaranteed to be current traffic incidents.
+
+An optional GeoJSON open-government feed can be configured with `TRAFFIC_OPEN_DATA_URL`. Point features are normalized for the city map and cached server-side for five minutes. Optional HERE incident data is disabled unless `HERE_API_KEY` is explicitly configured; Cityzen sends that request only from the backend and remains fully usable without it. No paid provider, credit card, routing service, Redis, or background queue is required.
+
+`ENABLE_INFRASTRUCTURE_DEMO_DATA=true` allows a clearly labeled in-memory fallback marker only when no stored or configured provider event is available. Set it to `false` in production. Demo records are never presented as real events.
+
 Public information endpoints and pages are available for municipal services, announcements, and events:
 
 - `GET /api/services` and `/services`
