@@ -116,11 +116,39 @@ Authorization: Bearer <token>
 
 Notifications are created for report assignments, status changes, resolutions, and relevant comments. The authenticated web app polls only the lightweight unread-count endpoint every 30 seconds; notification history is persistent and paginated.
 
+## Municipal information
+
+Public information endpoints and pages are available for municipal services, announcements, and events:
+
+- `GET /api/services` and `/services`
+- `GET /api/announcements` and `/announcements`
+- `GET /api/events` and `/events`
+
+Department heads manage only their own department's content under `/municipality/*`. Administrators use the same management pages with city-wide access and may publish city-wide announcements or events. Draft and expired content is excluded from public responses.
+
+Services, announcements, and events may each have one optional cover photo. Municipality editors can select and preview the photo while creating or editing content. JPEG, PNG, and WebP files up to 5 MB are accepted and stored locally in `server/uploads/content/` during development.
+
+### Online service requests
+
+Citizens can request an active municipal service from `/services/{id}/request` and track progress under `/my-services`. Each request is automatically routed to the service's department. Department heads assign requests only to active employees in their department; assigned employees, department heads, and administrators can process valid status transitions under `/municipality/service-requests`.
+
+Service-request endpoints include:
+
+- `POST /api/service-requests`
+- `GET /api/service-requests/my`
+- `GET /api/service-requests/:id`
+- `PATCH /api/service-requests/:id/cancel`
+- `GET /api/municipality/service-requests`
+- `PATCH /api/service-requests/:id/assign`
+- `PATCH /api/service-requests/:id/status`
+
+`COMPLETED`, `REJECTED`, and `CANCELLED` requests are terminal. Completing a request records `completedAt`; completed requests cannot be reopened in this initial workflow.
+
 ### Development image storage
 
 Report photos are stored locally in `server/uploads/reports/` during development and are served from `/uploads/reports/...`. JPEG, PNG, and WebP images are supported, with a maximum size of 5 MB per image and 5 images per report.
 
-Uploaded user files are ignored by Git. Local filesystem storage is for development only; a production deployment should use persistent object storage.
+Uploaded user and municipal-content files are ignored by Git. Local filesystem storage is for development only; a production deployment should use persistent object storage.
 
 ### Report locations
 

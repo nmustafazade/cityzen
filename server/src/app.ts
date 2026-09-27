@@ -8,8 +8,10 @@ import authRouter from "./routes/auth.routes";
 import healthRouter from "./routes/health.routes";
 import managementRouter from "./routes/management.routes";
 import notificationRouter from "./routes/notification.routes";
+import municipalityRouter, { announcementRouter, eventRouter, publicDepartmentRouter, serviceRouter } from "./routes/municipal-content.routes";
 import reportCategoryRouter from "./routes/report-category.routes";
 import reportRouter from "./routes/report.routes";
+import { municipalityServiceRequestRouter, serviceRequestRouter } from "./routes/service-request.routes";
 
 const app = express();
 
@@ -28,8 +30,15 @@ app.use("/api/auth", authRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/management", managementRouter);
 app.use("/api/notifications", notificationRouter);
+app.use("/api/services", serviceRouter);
+app.use("/api/announcements", announcementRouter);
+app.use("/api/events", eventRouter);
+app.use("/api/departments", publicDepartmentRouter);
+app.use("/api/municipality/service-requests", municipalityServiceRequestRouter);
+app.use("/api/municipality", municipalityRouter);
 app.use("/api/report-categories", reportCategoryRouter);
 app.use("/api/reports", reportRouter);
+app.use("/api/service-requests", serviceRequestRouter);
 
 app.use(errorHandler);
 

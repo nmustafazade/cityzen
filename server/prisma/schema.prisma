@@ -37,47 +37,70 @@ enum NotificationType {
   REPORT_STATUS_CHANGED
   REPORT_COMMENT
   REPORT_RESOLVED
+  SERVICE_REQUEST_CREATED
+  SERVICE_REQUEST_ASSIGNED
+  SERVICE_REQUEST_STATUS_CHANGED
+  SERVICE_REQUEST_COMPLETED
+}
+
+enum ServiceRequestStatus {
+  SUBMITTED
+  UNDER_REVIEW
+  ASSIGNED
+  IN_PROGRESS
+  COMPLETED
+  REJECTED
+  CANCELLED
 }
 
 model User {
-  id               Int                   @id @default(autoincrement())
-  firstName        String
-  lastName         String
-  email            String                @unique
-  passwordHash     String
-  role             UserRole              @default(CITIZEN)
-  phone            String?
-  profileImageUrl  String?
-  isActive         Boolean               @default(true)
-  isEmailVerified  Boolean               @default(false)
-  departmentId     Int?
-  createdAt        DateTime              @default(now())
-  updatedAt        DateTime              @updatedAt
-  department       Department?           @relation(fields: [departmentId], references: [id], onDelete: SetNull)
-  addresses        Address[]
-  submittedReports Report[]              @relation("CitizenReports")
-  assignedReports  Report[]              @relation("AssignedEmployeeReports")
-  reportChanges    ReportStatusHistory[] @relation("ReportStatusChangedBy")
-  reportComments   ReportComment[]
-  reportUpvotes    ReportUpvote[]
-  reportFeedbacks  ReportFeedback[]      @relation("CitizenReportFeedback")
-  notifications    Notification[]        @relation("NotificationRecipient")
-  notificationActs Notification[]        @relation("NotificationActor")
+  id                      Int                           @id @default(autoincrement())
+  firstName               String
+  lastName                String
+  email                   String                        @unique
+  passwordHash            String
+  role                    UserRole                      @default(CITIZEN)
+  phone                   String?
+  profileImageUrl         String?
+  isActive                Boolean                       @default(true)
+  isEmailVerified         Boolean                       @default(false)
+  departmentId            Int?
+  createdAt               DateTime                      @default(now())
+  updatedAt               DateTime                      @updatedAt
+  department              Department?                   @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  addresses               Address[]
+  submittedReports        Report[]                      @relation("CitizenReports")
+  assignedReports         Report[]                      @relation("AssignedEmployeeReports")
+  reportChanges           ReportStatusHistory[]         @relation("ReportStatusChangedBy")
+  reportComments          ReportComment[]
+  reportUpvotes           ReportUpvote[]
+  reportFeedbacks         ReportFeedback[]              @relation("CitizenReportFeedback")
+  notifications           Notification[]                @relation("NotificationRecipient")
+  notificationActs        Notification[]                @relation("NotificationActor")
+  announcements           Announcement[]                @relation("AnnouncementCreator")
+  cityEvents              CityEvent[]                   @relation("CityEventCreator")
+  serviceRequests         ServiceRequest[]              @relation("CitizenServiceRequests")
+  assignedServiceRequests ServiceRequest[]              @relation("AssignedServiceRequests")
+  serviceRequestChanges   ServiceRequestStatusHistory[] @relation("ServiceRequestChangedBy")
 
   @@index([role])
   @@index([departmentId])
 }
 
 model Department {
-  id          Int              @id @default(autoincrement())
-  name        String           @unique
-  description String?
-  isActive    Boolean          @default(true)
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-  employees   User[]
-  reports     Report[]
-  categories  ReportCategory[]
+  id              Int                @id @default(autoincrement())
+  name            String             @unique
+  description     String?
+  isActive        Boolean            @default(true)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  employees       User[]
+  reports         Report[]
+  categories      ReportCategory[]
+  services        MunicipalService[]
+  announcements   Announcement[]
+  cityEvents      CityEvent[]
+  serviceRequests ServiceRequest[]
 }
 
 model Address {
@@ -232,22 +255,140 @@ model ReportFeedback {
 }
 
 model Notification {
-  id        Int              @id @default(autoincrement())
-  userId    Int
-  type      NotificationType
-  title     String
-  message   String
-  reportId  Int?
-  actorId   Int?
-  isRead    Boolean          @default(false)
-  readAt    DateTime?
-  createdAt DateTime         @default(now())
-  user      User             @relation("NotificationRecipient", fields: [userId], references: [id], onDelete: Restrict)
-  report    Report?          @relation(fields: [reportId], references: [id], onDelete: SetNull)
-  actor     User?            @relation("NotificationActor", fields: [actorId], references: [id], onDelete: SetNull)
+  id               Int              @id @default(autoincrement())
+  userId           Int
+  type             NotificationType
+  title            String
+  message          String
+  reportId         Int?
+  serviceRequestId Int?
+  actorId          Int?
+  isRead           Boolean          @default(false)
+  readAt           DateTime?
+  createdAt        DateTime         @default(now())
+  user             User             @relation("NotificationRecipient", fields: [userId], references: [id], onDelete: Restrict)
+  report           Report?          @relation(fields: [reportId], references: [id], onDelete: SetNull)
+  serviceRequest   ServiceRequest?  @relation(fields: [serviceRequestId], references: [id], onDelete: SetNull)
+  actor            User?            @relation("NotificationActor", fields: [actorId], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@index([userId, isRead])
   @@index([createdAt])
   @@index([reportId])
+  @@index([serviceRequestId])
+}
+
+model MunicipalService {
+  id              Int              @id @default(autoincrement())
+  departmentId    Int
+  title           String
+  description     String           @db.Text
+  instructions    String?          @db.Text
+  requirements    String?          @db.Text
+  contactPhone    String?
+  contactEmail    String?
+  externalUrl     String?
+  address         String?
+  imageUrl        String?
+  isActive        Boolean          @default(true)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  department      Department       @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  serviceRequests ServiceRequest[]
+
+  @@index([departmentId])
+  @@index([isActive])
+  @@index([title])
+}
+
+model ServiceRequest {
+  id                   Int                           @id @default(autoincrement())
+  serviceId            Int
+  citizenId            Int
+  departmentId         Int
+  assignedEmployeeId   Int?
+  status               ServiceRequestStatus          @default(SUBMITTED)
+  description          String                        @db.Text
+  address              String?
+  latitude             Decimal?                      @db.Decimal(10, 7)
+  longitude            Decimal?                      @db.Decimal(10, 7)
+  preferredDate        DateTime?
+  contactPhone         String?
+  municipalityResponse String?                       @db.Text
+  submittedAt          DateTime                      @default(now())
+  completedAt          DateTime?
+  createdAt            DateTime                      @default(now())
+  updatedAt            DateTime                      @updatedAt
+  service              MunicipalService              @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  citizen              User                          @relation("CitizenServiceRequests", fields: [citizenId], references: [id], onDelete: Restrict)
+  department           Department                    @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  assignedEmployee     User?                         @relation("AssignedServiceRequests", fields: [assignedEmployeeId], references: [id], onDelete: SetNull)
+  history              ServiceRequestStatusHistory[]
+  notifications        Notification[]
+
+  @@index([citizenId, createdAt])
+  @@index([departmentId, status])
+  @@index([assignedEmployeeId, status])
+  @@index([serviceId])
+}
+
+model ServiceRequestStatusHistory {
+  id               Int                   @id @default(autoincrement())
+  serviceRequestId Int
+  oldStatus        ServiceRequestStatus?
+  newStatus        ServiceRequestStatus
+  changedById      Int
+  note             String?               @db.Text
+  createdAt        DateTime              @default(now())
+  serviceRequest   ServiceRequest        @relation(fields: [serviceRequestId], references: [id], onDelete: Cascade)
+  changedBy        User                  @relation("ServiceRequestChangedBy", fields: [changedById], references: [id], onDelete: Restrict)
+
+  @@index([serviceRequestId, createdAt])
+  @@index([changedById])
+}
+
+model Announcement {
+  id           Int         @id @default(autoincrement())
+  departmentId Int?
+  title        String
+  content      String      @db.Text
+  isPublished  Boolean     @default(false)
+  publishedAt  DateTime?
+  expiresAt    DateTime?
+  imageUrl     String?
+  createdById  Int
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  department   Department? @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  createdBy    User        @relation("AnnouncementCreator", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([departmentId])
+  @@index([isPublished, publishedAt])
+  @@index([expiresAt])
+}
+
+model CityEvent {
+  id           Int         @id @default(autoincrement())
+  departmentId Int?
+  title        String
+  description  String      @db.Text
+  locationName String?
+  address      String?
+  latitude     Decimal?    @db.Decimal(10, 7)
+  longitude    Decimal?    @db.Decimal(10, 7)
+  startsAt     DateTime
+  endsAt       DateTime?
+  externalUrl  String?
+  imageUrl     String?
+  isPublished  Boolean     @default(false)
+  publishedAt  DateTime?
+  createdById  Int
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  department   Department? @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  createdBy    User        @relation("CityEventCreator", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([departmentId])
+  @@index([isPublished, startsAt])
+  @@index([startsAt])
 }

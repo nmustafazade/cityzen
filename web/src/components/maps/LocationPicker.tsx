@@ -15,10 +15,14 @@ export function LocationPicker({
   coordinates,
   onChange,
   disabled = false,
+  required = false,
+  helpText = "Click the map or drag the marker to pinpoint the issue.",
 }: {
   coordinates: Coordinates | null;
   onChange: (coordinates: Coordinates | null) => void;
   disabled?: boolean;
+  required?: boolean;
+  helpText?: string;
 }) {
   const [isLocating, setIsLocating] = useState(false);
   const [locationError, setLocationError] = useState("");
@@ -53,8 +57,8 @@ export function LocationPicker({
     <section aria-labelledby="location-heading" className="space-y-4">
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
         <div>
-          <h2 id="location-heading" className="text-lg font-bold text-slate-950">Location <span aria-hidden="true" className="text-red-600">*</span></h2>
-          <p className="mt-1 text-sm text-slate-600">Click the map or drag the marker to pinpoint the issue.</p>
+          <h2 id="location-heading" className="text-lg font-bold text-slate-950">Location {required && <span aria-hidden="true" className="text-red-600">*</span>}</h2>
+          <p className="mt-1 text-sm text-slate-600">{helpText}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button type="button" onClick={useCurrentLocation} disabled={disabled || isLocating} className="rounded-lg bg-emerald-600 px-3.5 py-2 text-sm font-semibold text-white hover:bg-emerald-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 disabled:cursor-not-allowed disabled:opacity-60">

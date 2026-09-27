@@ -31,9 +31,7 @@ export function Navbar() {
           <Link href="/" className="text-xl font-bold tracking-tight text-slate-950">
             <span className="text-emerald-600">City</span>zen
           </Link>
-          <Link href="/" className="hidden text-sm font-medium text-slate-600 hover:text-emerald-700 sm:block">
-            Home
-          </Link>
+          <div className="hidden items-center gap-5 md:flex"><Link href="/" className="text-sm font-medium text-slate-600 hover:text-emerald-700">Home</Link><Link href="/services" className="text-sm font-medium text-slate-600 hover:text-emerald-700">Services</Link><Link href="/announcements" className="hidden text-sm font-medium text-slate-600 hover:text-emerald-700 xl:block">Announcements</Link><Link href="/events" className="hidden text-sm font-medium text-slate-600 hover:text-emerald-700 xl:block">Events</Link></div>
         </div>
 
         {!isLoading && (
@@ -51,13 +49,15 @@ export function Navbar() {
                     <Link href="/reports/new" className="hidden text-sm font-medium text-slate-700 hover:text-emerald-700 lg:block">
                       Report an Issue
                     </Link>
+                    <Link href="/my-services" className="hidden text-sm font-medium text-slate-700 hover:text-emerald-700 xl:block">
+                      My Service Requests
+                    </Link>
                   </>
                 )}
                 {(user.role === "EMPLOYEE" || user.role === "DEPARTMENT_HEAD" || user.role === "ADMIN") && (
-                  <Link href="/employee/reports" className="text-sm font-medium text-slate-700 hover:text-emerald-700">
-                    Reports
-                  </Link>
+                  <><Link href="/employee/reports" className="text-sm font-medium text-slate-700 hover:text-emerald-700">Reports</Link><Link href="/municipality/service-requests" className="hidden text-sm font-medium text-slate-700 hover:text-emerald-700 lg:block">Service Requests</Link></>
                 )}
+                {(user.role === "DEPARTMENT_HEAD" || user.role === "ADMIN") && <Link href="/municipality/services" className="hidden text-sm font-medium text-slate-700 hover:text-emerald-700 lg:block">Publishing</Link>}
                 {user.role === "ADMIN" && (
                   <>
                     <Link href="/admin/users" className="hidden text-sm font-medium text-slate-700 hover:text-emerald-700 lg:block">Users</Link>
@@ -103,6 +103,7 @@ export function Navbar() {
             )}
           </div>
         )}
+        <div className="flex w-full flex-wrap items-center justify-center gap-5 border-t border-slate-100 pt-3 text-sm font-medium text-slate-600 md:hidden"><Link href="/services">Services</Link>{user?.role === "CITIZEN" && <Link href="/my-services">My Requests</Link>}{user && user.role !== "CITIZEN" && <Link href="/municipality/service-requests">Service Requests</Link>}<Link href="/announcements">Announcements</Link><Link href="/events">Events</Link></div>
       </nav>
     </header>
   );

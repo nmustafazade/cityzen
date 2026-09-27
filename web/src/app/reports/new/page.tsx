@@ -198,7 +198,7 @@ function CreateReportContent() {
             <textarea id="description" required rows={6} maxLength={5000} value={form.description} onChange={(event) => update("description")(event.target.value)} className={inputStyle} />
           </div>
           <FormField label="Address" id="addressText" required value={form.addressText} onChange={update("addressText")} maxLength={180} />
-          <LocationPicker coordinates={selectedCoordinates} onChange={updateLocation} disabled={isSubmitting} />
+          <LocationPicker coordinates={selectedCoordinates} onChange={updateLocation} disabled={isSubmitting} required />
           <ReportImagePicker maxFiles={5} onFilesChange={setImages} disabled={isSubmitting} />
           <button type="submit" disabled={isSubmitting || categories.length === 0} className="w-full rounded-xl bg-emerald-600 px-5 py-3 font-semibold text-white shadow-sm transition hover:bg-emerald-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 disabled:cursor-not-allowed disabled:bg-emerald-400">
             {isSubmitting ? "Submitting..." : createdReportId ? "Retry Photo Upload" : "Submit Report"}

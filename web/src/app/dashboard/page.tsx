@@ -10,22 +10,33 @@ const dashboardCards: Record<UserRole, { title: string; description: string; hre
   CITIZEN: [
     { title: "My Reports", description: "Track the city issues you have submitted.", href: "/reports" },
     { title: "Report an Issue", description: "Tell your municipality about a local problem.", href: "/reports/new" },
-    { title: "City Services", description: "Discover services available in your city." },
+    { title: "City Services", description: "Discover services available in your city.", href: "/services" },
+    { title: "My Service Requests", description: "Track your submitted municipal service requests.", href: "/my-services" },
+    { title: "Announcements", description: "Read official city and department updates.", href: "/announcements" },
+    { title: "Events", description: "Find upcoming activities across the city.", href: "/events" },
   ],
   EMPLOYEE: [
+    { title: "Service Requests", description: "Process municipal service requests assigned to you.", href: "/municipality/service-requests" },
     { title: "Assigned Reports", description: "Review issues currently assigned to you." },
     { title: "Report Management", description: "Coordinate and update municipal reports.", href: "/employee/reports" },
     { title: "Department", description: "View your department workspace." },
   ],
   DEPARTMENT_HEAD: [
+    { title: "Service Requests", description: "Review and assign requests for your department.", href: "/municipality/service-requests" },
     { title: "Department Reports", description: "Review issues routed to your department.", href: "/employee/reports" },
-    { title: "Assign Reports", description: "Assign department issues to your employees.", href: "/employee/reports" },
-    { title: "Department", description: "Coordinate your municipal team." },
+    { title: "Municipal Services", description: "Manage services published by your department.", href: "/municipality/services" },
+    { title: "Announcements", description: "Publish department announcements.", href: "/municipality/announcements" },
+    { title: "Events", description: "Publish department events.", href: "/municipality/events" },
+    { title: "Assign Reports", description: "Assign department reports to available employees.", href: "/employee/reports" },
   ],
   ADMIN: [
+    { title: "Service Requests", description: "Oversee municipal service requests city-wide.", href: "/municipality/service-requests" },
     { title: "Reports", description: "Oversee city issue reporting activity.", href: "/employee/reports" },
     { title: "Users", description: "Manage citizen and municipality accounts." },
     { title: "Departments", description: "Coordinate municipal departments." },
+    { title: "Services", description: "Manage city service information.", href: "/municipality/services" },
+    { title: "Announcements", description: "Manage citywide and department announcements.", href: "/municipality/announcements" },
+    { title: "Events", description: "Manage citywide and department events.", href: "/municipality/events" },
   ],
 };
 

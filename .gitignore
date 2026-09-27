@@ -42,3 +42,6 @@ server/uploads/*
 !server/uploads/reports/
 server/uploads/reports/*
 !server/uploads/reports/.gitkeep
+!server/uploads/content/
+server/uploads/content/*
+!server/uploads/content/.gitkeep

@@ -115,3 +115,9 @@ export function AdminRoute({ children }: { children: ReactNode }) {
     </ProtectedRoute>
   );
 }
+
+export function MunicipalityRoute({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
+  const allowed = user?.role === "DEPARTMENT_HEAD" || user?.role === "ADMIN";
+  return <ProtectedRoute>{allowed ? children : <main className="mx-auto flex min-h-[70vh] max-w-xl items-center px-6 text-center"><section className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm"><h1 className="text-2xl font-bold">Access denied</h1><p className="mt-3 text-slate-600">Municipal publishing is available to department heads and administrators.</p><Link href="/dashboard" className="mt-6 inline-flex font-semibold text-emerald-700">Return to Dashboard</Link></section></main>}</ProtectedRoute>;
+}

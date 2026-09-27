@@ -53,7 +53,11 @@ function NotificationsContent() {
   }, [loadNotifications]);
 
   function destination(notification: Notification) {
-    if (!notification.report || !user) return null;
+    if (!user) return null;
+    if (notification.serviceRequest) return user.role === "CITIZEN"
+      ? `/my-services/${notification.serviceRequest.id}`
+      : `/municipality/service-requests/${notification.serviceRequest.id}`;
+    if (!notification.report) return null;
     return user.role === "CITIZEN"
       ? `/reports/${notification.report.id}`
       : `/employee/reports/${notification.report.id}`;

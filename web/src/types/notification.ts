@@ -6,7 +6,11 @@ export type NotificationType =
   | "REPORT_ASSIGNED"
   | "REPORT_STATUS_CHANGED"
   | "REPORT_COMMENT"
-  | "REPORT_RESOLVED";
+  | "REPORT_RESOLVED"
+  | "SERVICE_REQUEST_CREATED"
+  | "SERVICE_REQUEST_ASSIGNED"
+  | "SERVICE_REQUEST_STATUS_CHANGED"
+  | "SERVICE_REQUEST_COMPLETED";
 
 export interface Notification {
   id: number;
@@ -17,6 +21,7 @@ export interface Notification {
   readAt: string | null;
   createdAt: string;
   report: { id: number; title: string; status: ReportStatus } | null;
+  serviceRequest: { id: number; status: import("./service-request").ServiceRequestStatus; service: { title: string } } | null;
   actor: {
     id: number;
     firstName: string;

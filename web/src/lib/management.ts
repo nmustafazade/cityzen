@@ -16,6 +16,10 @@ export function getManagementDepartments() {
   return apiRequest<{ departments: Department[] }>("/api/management/departments");
 }
 
+export function getPublicDepartments() {
+  return apiRequest<{ departments: Department[] }>("/api/departments");
+}
+
 export function getManagementEmployees(departmentId?: number) {
   const query = departmentId ? `?departmentId=${departmentId}` : "";
   return apiRequest<{ employees: ManagementEmployee[] }>(`/api/management/employees${query}`);
