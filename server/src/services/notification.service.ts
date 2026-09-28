@@ -12,6 +12,7 @@ interface CreateNotificationInput {
   message: string;
   reportId?: number;
   serviceRequestId?: number;
+  emergencyAlertId?: number;
   actorId?: number;
 }
 
@@ -25,6 +26,7 @@ const notificationSelect = {
   createdAt: true,
   report: { select: { id: true, title: true, status: true } },
   serviceRequest: { select: { id: true, status: true, service: { select: { title: true } } } },
+  emergencyAlert: { select: { id: true, title: true, severity: true } },
   actor: { select: { id: true, firstName: true, lastName: true, role: true } },
 } as const;
 

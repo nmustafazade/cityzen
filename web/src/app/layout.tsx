@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Navbar } from "@/components/layout/Navbar";
+import { EmergencyBanner } from "@/components/layout/EmergencyBanner";
 import { AuthProvider } from "@/context/AuthContext";
 import { NotificationProvider } from "@/context/NotificationContext";
 import "./globals.css";
@@ -17,6 +18,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <NotificationProvider>
             <div className="flex min-h-screen flex-col">
               <Navbar />
+              <EmergencyBanner />
               {children}
             </div>
           </NotificationProvider>

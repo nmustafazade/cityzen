@@ -54,6 +54,8 @@ function NotificationsContent() {
 
   function destination(notification: Notification) {
     if (!user) return null;
+    if (notification.emergencyAlert) return `/alerts/${notification.emergencyAlert.id}`;
+    if (notification.type === "WASTE_COLLECTION_REMINDER") return "/waste";
     if (notification.serviceRequest) return user.role === "CITIZEN"
       ? `/my-services/${notification.serviceRequest.id}`
       : `/municipality/service-requests/${notification.serviceRequest.id}`;

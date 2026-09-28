@@ -14,6 +14,9 @@ import reportRouter from "./routes/report.routes";
 import { municipalityServiceRequestRouter, serviceRequestRouter } from "./routes/service-request.routes";
 import { facilityCategoryAdminRouter, infrastructureRouter, municipalityInfrastructureRouter } from "./routes/infrastructure.routes";
 import parkingReservationRouter from "./routes/parking-reservation.routes";
+import { municipalityWasteRouter, wasteRouter } from "./routes/waste.routes";
+import { environmentRouter, municipalityEnvironmentRouter, weatherRouter } from "./routes/environment.routes";
+import { emergencyAlertRouter, municipalityEmergencyAlertRouter } from "./routes/emergency-alert.routes";
 
 const app = express();
 
@@ -45,6 +48,13 @@ app.use("/api/reports", reportRouter);
 app.use("/api/service-requests", serviceRequestRouter);
 app.use("/api/infrastructure", infrastructureRouter);
 app.use("/api/parking-reservations", parkingReservationRouter);
+app.use("/api/waste", wasteRouter);
+app.use("/api/environment", environmentRouter);
+app.use("/api/weather", weatherRouter);
+app.use("/api/emergency-alerts", emergencyAlertRouter);
+app.use("/api/municipality/waste", municipalityWasteRouter);
+app.use("/api/municipality/environment", municipalityEnvironmentRouter);
+app.use("/api/municipality/emergency-alerts", municipalityEmergencyAlertRouter);
 
 app.use(errorHandler);
 

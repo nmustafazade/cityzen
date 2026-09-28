@@ -188,3 +188,20 @@ Uploaded user and municipal-content files are ignored by Git. Local filesystem s
 ### Report locations
 
 Report creation uses Leaflet with OpenStreetMap tiles for optional map and browser GPS selection. The initial development map center (`40.4093`, `49.8671`) is only a visual fallback; it is not saved unless the citizen explicitly selects a location. Browser location is requested only after the user clicks **Use My Current Location**.
+
+## Environment, waste, and city safety
+
+Citizen pages include `/waste`, `/environment`, and `/alerts`. Waste collection schedules are zone-based, support dated cancellations/rescheduling/extra collections, and can be linked to saved citizen addresses. Citizens may opt into collection reminders; the backend checks enabled preferences on a lightweight interval and deduplicates delivered in-app notifications. Municipality-created waste facilities are editable by authorized department heads and administrators, while OpenStreetMap imports are read-only.
+
+The infrastructure import also collects conservatively mapped recycling centres, recycling containers, and public waste bins from OpenStreetMap. Run the existing idempotent importer after configuring the city bounding box:
+
+```bash
+cd server
+npm run import:osm-infrastructure
+```
+
+The environment dashboard uses the free Open-Meteo weather and air-quality APIs through the backend, with a short server-side cache. No API key, payment, or credit card is required. Set `OPEN_METEO_AIR_QUALITY_ENABLED=false` to disable air-quality requests. `ENVIRONMENT_OPEN_DATA_URL` and `EMERGENCY_OPEN_DATA_URL` are reserved for optional municipality/open-government feeds; leaving them empty does not affect core functionality. Cityzen does not fabricate noise readings: when no measured noise data exists, the UI explicitly reports it as unavailable.
+
+Emergency alerts are published by authorized municipality users and displayed at `/alerts`, with active critical alerts shown in the application banner. Department heads are restricted to their own department and cannot publish city-wide alerts; administrators may publish city-wide alerts. Publishing a critical city-wide alert creates persistent citizen notifications without exposing private account data.
+
+Relevant environment variables are documented in `server/.env.example`. Demo environmental data is controlled by `ENABLE_ENVIRONMENT_DEMO_DATA`; it must remain clearly identified and should be disabled in production. OpenStreetMap-derived records retain source attribution and sync timestamps, and external failures never remove existing imported data.

@@ -1,4 +1,4 @@
-import { InfrastructureDataSource, ParkingFacilityType, PrismaClient, RoadEventSeverity, RoadEventStatus, RoadEventType } from "@prisma/client";
+import { InfrastructureDataSource, ParkingFacilityType, PrismaClient, RoadEventSeverity, RoadEventStatus, RoadEventType, WasteFacilityType, WasteType } from "@prisma/client";
 
 import { bbox, queryOverpass } from "./overpass.client";
 import type { ImportBounds, ImportStats, OsmElement } from "./osm.types";
@@ -44,12 +44,14 @@ async function exists(model: "parking" | "facility" | "road", id: string) {
   return Boolean(await database.roadEvent.findUnique({ where: { source_externalSourceId: { source, externalSourceId: id } }, select: { id: true } }));
 }
 
+function acceptedWaste(tags: Record<string,string>) { const mappings: Array<[string,WasteType]> = [["recycling:glass",WasteType.GLASS],["recycling:paper",WasteType.PAPER],["recycling:plastic",WasteType.PLASTIC],["recycling:metal",WasteType.METAL],["recycling:electrical_items",WasteType.ELECTRONIC]]; return mappings.filter(([key])=>tags[key]==="yes").map(([,value])=>value); }
+
 export async function importOsmInfrastructure(bounds: ImportBounds) {
   const owner = await requirements();
   const region = bbox(bounds);
-  const query = `[out:json][timeout:40];(nwr[amenity=parking](${region});nwr[amenity~"^(hospital|clinic|pharmacy|police|fire_station|toilets|library|community_centre|recycling|charging_station|townhall)$"](${region});nwr[leisure~"^(park|sports_centre|playground)$"](${region});nwr[highway=construction](${region});nwr[hazard=roadworks](${region}););out center tags;`;
+  const query = `[out:json][timeout:40];(nwr[amenity=parking](${region});nwr[amenity~"^(hospital|clinic|pharmacy|police|fire_station|toilets|library|community_centre|recycling|waste_basket|charging_station|townhall)$"](${region});nwr["waste_basket"="yes"](${region});nwr[leisure~"^(park|sports_centre|playground)$"](${region});nwr[highway=construction](${region});nwr[hazard=roadworks](${region}););out center tags;`;
   const response = await queryOverpass(query);
-  const parking: ImportStats = { fetched: 0, created: 0, updated: 0, skipped: 0 }, facilities: ImportStats = { fetched: 0, created: 0, updated: 0, skipped: 0 }, roadEvents: ImportStats = { fetched: 0, created: 0, updated: 0, skipped: 0 };
+  const parking: ImportStats = { fetched: 0, created: 0, updated: 0, skipped: 0 }, facilities: ImportStats = { fetched: 0, created: 0, updated: 0, skipped: 0 }, wasteFacilities: ImportStats = { fetched: 0, created: 0, updated: 0, skipped: 0 }, roadEvents: ImportStats = { fetched: 0, created: 0, updated: 0, skipped: 0 };
   for (const element of response.elements) {
     const tags = element.tags || {}, point = coordinates(element), id = externalId(element);
     if (!point) continue;
@@ -57,6 +59,9 @@ export async function importOsmInfrastructure(bounds: ImportBounds) {
       parking.fetched++; const wasExisting = await exists("parking", id); const capacity = integer(tags.capacity) ?? 0;
       await database.parkingFacility.upsert({ where: { source_externalSourceId: { source, externalSourceId: id } }, update: { name: label(tags, `OSM parking ${element.id}`), description: tags.description, type: parkingType(tags), address: address(tags), ...point, totalSpaces: capacity, availableSpaces: null, accessibleSpaces: integer(tags["capacity:disabled"]) ?? 0, evChargingSpaces: integer(tags["capacity:charging"]) ?? 0, openingHours: tags.opening_hours, isActive: true, sourceUrl: sourceUrl(element), lastSyncedAt: now() }, create: { departmentId: owner.departmentId, name: label(tags, `OSM parking ${element.id}`), description: tags.description, type: parkingType(tags), address: address(tags), ...point, totalSpaces: capacity, availableSpaces: null, accessibleSpaces: integer(tags["capacity:disabled"]) ?? 0, evChargingSpaces: integer(tags["capacity:charging"]) ?? 0, openingHours: tags.opening_hours, supportsReservation: false, isActive: true, source, externalSourceId: id, sourceUrl: sourceUrl(element), lastSyncedAt: now() } });
       parking[wasExisting ? "updated" : "created"]++; continue;
+    }
+    if(tags.amenity==="recycling"||tags.amenity==="waste_basket"||tags.waste_basket==="yes"){
+      wasteFacilities.fetched++;const existing=await database.wasteFacility.findUnique({where:{source_externalSourceId:{source,externalSourceId:id}},select:{id:true}});const type=tags.amenity==="recycling"?(tags.recycling_type==="centre"?WasteFacilityType.RECYCLING_CENTER:WasteFacilityType.RECYCLING_BIN):WasteFacilityType.PUBLIC_BIN;const accepted=acceptedWaste(tags);const data={type,name:label(tags,type===WasteFacilityType.PUBLIC_BIN?"Public waste bin":"Recycling point"),description:tags.description,address:address(tags),...point,openingHours:tags.opening_hours,isActive:true,sourceUrl:sourceUrl(element),lastSyncedAt:now()};const record=await database.wasteFacility.upsert({where:{source_externalSourceId:{source,externalSourceId:id}},update:data,create:{...data,departmentId:null,source,externalSourceId:id}});await database.wasteFacilityAcceptedType.deleteMany({where:{facilityId:record.id}});if(accepted.length)await database.wasteFacilityAcceptedType.createMany({data:accepted.map(wasteType=>({facilityId:record.id,wasteType})),skipDuplicates:true});wasteFacilities[existing?"updated":"created"]++;continue;
     }
     const mapping = facilityMapping(tags);
     if (mapping) {
@@ -70,7 +75,7 @@ export async function importOsmInfrastructure(bounds: ImportBounds) {
       await database.roadEvent.upsert({ where: { source_externalSourceId: { source, externalSourceId: id } }, update: data, create: { ...data, departmentId: owner.departmentId, createdById: owner.createdById, source, externalSourceId: id } }); roadEvents[wasExisting ? "updated" : "created"]++;
     }
   }
-  return { parking, facilities, roadEvents };
+  return { parking, facilities, wasteFacilities, roadEvents };
 }
 
 export async function closeOsmImporter() { await database.$disconnect(); }

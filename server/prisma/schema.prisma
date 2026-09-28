@@ -41,6 +41,8 @@ enum NotificationType {
   SERVICE_REQUEST_ASSIGNED
   SERVICE_REQUEST_STATUS_CHANGED
   SERVICE_REQUEST_COMPLETED
+  EMERGENCY_ALERT
+  WASTE_COLLECTION_REMINDER
 }
 
 enum ServiceRequestStatus {
@@ -101,82 +103,166 @@ enum InfrastructureDataSource {
   OPEN_DATA
   HERE
   DEMO
+  OPEN_METEO
+  EMERGENCY_AUTHORITY
+}
+
+enum WasteType {
+  GENERAL
+  RECYCLING
+  ORGANIC
+  GLASS
+  PAPER
+  PLASTIC
+  METAL
+  ELECTRONIC
+  HAZARDOUS
+  BULKY
+}
+
+enum Weekday {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+enum WasteScheduleExceptionType {
+  CANCELLED
+  RESCHEDULED
+  EXTRA_COLLECTION
+}
+
+enum WasteFacilityType {
+  PUBLIC_BIN
+  RECYCLING_BIN
+  RECYCLING_CENTER
+  E_WASTE_POINT
+  HAZARDOUS_WASTE_POINT
+  COMPOST_POINT
+}
+
+enum EnvironmentalMetric {
+  PM25
+  PM10
+  AQI
+  TEMPERATURE
+  HUMIDITY
+  NO2
+  O3
+  CO
+  SO2
+  NOISE_DB
+}
+
+enum EmergencyAlertSeverity {
+  ADVISORY
+  WATCH
+  WARNING
+  CRITICAL
+}
+
+enum EmergencyAlertType {
+  SEVERE_WEATHER
+  FLOOD
+  FIRE
+  EARTHQUAKE
+  INFRASTRUCTURE_FAILURE
+  WATER_DISRUPTION
+  POWER_DISRUPTION
+  PUBLIC_SAFETY
+  ROAD_EMERGENCY
+  OTHER
 }
 
 model User {
-  id                      Int                           @id @default(autoincrement())
-  firstName               String
-  lastName                String
-  email                   String                        @unique
-  passwordHash            String
-  role                    UserRole                      @default(CITIZEN)
-  phone                   String?
-  profileImageUrl         String?
-  isActive                Boolean                       @default(true)
-  isEmailVerified         Boolean                       @default(false)
-  departmentId            Int?
-  createdAt               DateTime                      @default(now())
-  updatedAt               DateTime                      @updatedAt
-  department              Department?                   @relation(fields: [departmentId], references: [id], onDelete: SetNull)
-  addresses               Address[]
-  submittedReports        Report[]                      @relation("CitizenReports")
-  assignedReports         Report[]                      @relation("AssignedEmployeeReports")
-  reportChanges           ReportStatusHistory[]         @relation("ReportStatusChangedBy")
-  reportComments          ReportComment[]
-  reportUpvotes           ReportUpvote[]
-  reportFeedbacks         ReportFeedback[]              @relation("CitizenReportFeedback")
-  notifications           Notification[]                @relation("NotificationRecipient")
-  notificationActs        Notification[]                @relation("NotificationActor")
-  announcements           Announcement[]                @relation("AnnouncementCreator")
-  cityEvents              CityEvent[]                   @relation("CityEventCreator")
-  serviceRequests         ServiceRequest[]              @relation("CitizenServiceRequests")
-  assignedServiceRequests ServiceRequest[]              @relation("AssignedServiceRequests")
-  serviceRequestChanges   ServiceRequestStatusHistory[] @relation("ServiceRequestChangedBy")
-  createdRoadEvents       RoadEvent[]                   @relation("RoadEventCreator")
-  parkingReservations     ParkingReservation[]          @relation("CitizenParkingReservations")
+  id                       Int                           @id @default(autoincrement())
+  firstName                String
+  lastName                 String
+  email                    String                        @unique
+  passwordHash             String
+  role                     UserRole                      @default(CITIZEN)
+  phone                    String?
+  profileImageUrl          String?
+  isActive                 Boolean                       @default(true)
+  isEmailVerified          Boolean                       @default(false)
+  departmentId             Int?
+  createdAt                DateTime                      @default(now())
+  updatedAt                DateTime                      @updatedAt
+  department               Department?                   @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  addresses                Address[]
+  submittedReports         Report[]                      @relation("CitizenReports")
+  assignedReports          Report[]                      @relation("AssignedEmployeeReports")
+  reportChanges            ReportStatusHistory[]         @relation("ReportStatusChangedBy")
+  reportComments           ReportComment[]
+  reportUpvotes            ReportUpvote[]
+  reportFeedbacks          ReportFeedback[]              @relation("CitizenReportFeedback")
+  notifications            Notification[]                @relation("NotificationRecipient")
+  notificationActs         Notification[]                @relation("NotificationActor")
+  announcements            Announcement[]                @relation("AnnouncementCreator")
+  cityEvents               CityEvent[]                   @relation("CityEventCreator")
+  serviceRequests          ServiceRequest[]              @relation("CitizenServiceRequests")
+  assignedServiceRequests  ServiceRequest[]              @relation("AssignedServiceRequests")
+  serviceRequestChanges    ServiceRequestStatusHistory[] @relation("ServiceRequestChangedBy")
+  createdRoadEvents        RoadEvent[]                   @relation("RoadEventCreator")
+  parkingReservations      ParkingReservation[]          @relation("CitizenParkingReservations")
+  wasteReminderPreferences WasteReminderPreference[]
+  wasteReminderDeliveries  WasteReminderDelivery[]
+  createdEmergencyAlerts   EmergencyAlert[]              @relation("EmergencyAlertCreator")
 
   @@index([role])
   @@index([departmentId])
 }
 
 model Department {
-  id                Int                @id @default(autoincrement())
-  name              String             @unique
-  description       String?
-  isActive          Boolean            @default(true)
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
-  employees         User[]
-  reports           Report[]
-  categories        ReportCategory[]
-  services          MunicipalService[]
-  announcements     Announcement[]
-  cityEvents        CityEvent[]
-  serviceRequests   ServiceRequest[]
-  roadEvents        RoadEvent[]
-  parkingFacilities ParkingFacility[]
-  cityFacilities    CityFacility[]
+  id                    Int                    @id @default(autoincrement())
+  name                  String                 @unique
+  description           String?
+  isActive              Boolean                @default(true)
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  employees             User[]
+  reports               Report[]
+  categories            ReportCategory[]
+  services              MunicipalService[]
+  announcements         Announcement[]
+  cityEvents            CityEvent[]
+  serviceRequests       ServiceRequest[]
+  roadEvents            RoadEvent[]
+  parkingFacilities     ParkingFacility[]
+  cityFacilities        CityFacility[]
+  wasteZones            WasteCollectionZone[]
+  wasteFacilities       WasteFacility[]
+  environmentalStations EnvironmentalStation[]
+  emergencyAlerts       EmergencyAlert[]
 }
 
 model Address {
-  id             Int      @id @default(autoincrement())
-  userId         Int
-  label          String?
-  country        String
-  city           String
-  district       String?
-  neighborhood   String?
-  street         String?
-  buildingNumber String?
-  postalCode     String?
-  latitude       Decimal? @db.Decimal(10, 7)
-  longitude      Decimal? @db.Decimal(10, 7)
-  isPrimary      Boolean  @default(false)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                       Int                       @id @default(autoincrement())
+  userId                   Int
+  label                    String?
+  country                  String
+  city                     String
+  district                 String?
+  neighborhood             String?
+  street                   String?
+  buildingNumber           String?
+  postalCode               String?
+  latitude                 Decimal?                  @db.Decimal(10, 7)
+  longitude                Decimal?                  @db.Decimal(10, 7)
+  isPrimary                Boolean                   @default(false)
+  createdAt                DateTime                  @default(now())
+  updatedAt                DateTime                  @updatedAt
+  user                     User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  wasteCollectionZoneId    Int?
+  wasteCollectionZone      WasteCollectionZone?      @relation(fields: [wasteCollectionZoneId], references: [id], onDelete: SetNull)
+  wasteReminderPreferences WasteReminderPreference[]
 
   @@index([userId, isPrimary])
+  @@index([wasteCollectionZoneId])
 }
 
 model SystemHealth {
@@ -317,6 +403,7 @@ model Notification {
   message          String
   reportId         Int?
   serviceRequestId Int?
+  emergencyAlertId Int?
   actorId          Int?
   isRead           Boolean          @default(false)
   readAt           DateTime?
@@ -324,6 +411,7 @@ model Notification {
   user             User             @relation("NotificationRecipient", fields: [userId], references: [id], onDelete: Restrict)
   report           Report?          @relation(fields: [reportId], references: [id], onDelete: SetNull)
   serviceRequest   ServiceRequest?  @relation(fields: [serviceRequestId], references: [id], onDelete: SetNull)
+  emergencyAlert   EmergencyAlert?  @relation(fields: [emergencyAlertId], references: [id], onDelete: SetNull)
   actor            User?            @relation("NotificationActor", fields: [actorId], references: [id], onDelete: SetNull)
 
   @@index([userId])
@@ -331,6 +419,7 @@ model Notification {
   @@index([createdAt])
   @@index([reportId])
   @@index([serviceRequestId])
+  @@index([emergencyAlertId])
 }
 
 model MunicipalService {
@@ -576,4 +665,188 @@ model CityFacility {
   @@index([latitude, longitude])
   @@index([name])
   @@index([source, lastSyncedAt])
+}
+
+model WasteCollectionZone {
+  id           Int                       @id @default(autoincrement())
+  departmentId Int
+  name         String
+  description  String?
+  city         String?
+  district     String?
+  neighborhood String?
+  postalCode   String?
+  isActive     Boolean                   @default(true)
+  createdAt    DateTime                  @default(now())
+  updatedAt    DateTime                  @updatedAt
+  department   Department                @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  addresses    Address[]
+  schedules    WasteCollectionSchedule[]
+  exceptions   WasteScheduleException[]
+
+  @@unique([departmentId, name])
+  @@index([isActive, city, district])
+}
+
+model WasteCollectionSchedule {
+  id             Int                 @id @default(autoincrement())
+  zoneId         Int
+  wasteType      WasteType
+  dayOfWeek      Weekday
+  collectionTime String?
+  notes          String?
+  isActive       Boolean             @default(true)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  zone           WasteCollectionZone @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+
+  @@unique([zoneId, wasteType, dayOfWeek])
+  @@index([zoneId, isActive])
+}
+
+model WasteScheduleException {
+  id              Int                        @id @default(autoincrement())
+  zoneId          Int
+  wasteType       WasteType?
+  date            DateTime                   @db.Date
+  type            WasteScheduleExceptionType
+  replacementDate DateTime?                  @db.Date
+  note            String?
+  createdAt       DateTime                   @default(now())
+  updatedAt       DateTime                   @updatedAt
+  zone            WasteCollectionZone        @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+
+  @@index([zoneId, date])
+}
+
+model WasteFacility {
+  id               Int                         @id @default(autoincrement())
+  departmentId     Int?
+  type             WasteFacilityType
+  name             String?
+  description      String?                     @db.Text
+  address          String?
+  latitude         Decimal                     @db.Decimal(10, 7)
+  longitude        Decimal                     @db.Decimal(10, 7)
+  openingHours     String?
+  isActive         Boolean                     @default(true)
+  source           InfrastructureDataSource    @default(MUNICIPALITY)
+  externalSourceId String?
+  sourceUrl        String?
+  lastSyncedAt     DateTime?
+  createdAt        DateTime                    @default(now())
+  updatedAt        DateTime                    @updatedAt
+  department       Department?                 @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  acceptedTypes    WasteFacilityAcceptedType[]
+
+  @@unique([source, externalSourceId])
+  @@index([type, isActive])
+  @@index([departmentId, isActive])
+  @@index([latitude, longitude])
+}
+
+model WasteFacilityAcceptedType {
+  facilityId Int
+  wasteType  WasteType
+  facility   WasteFacility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+
+  @@id([facilityId, wasteType])
+  @@index([wasteType])
+}
+
+model WasteReminderPreference {
+  id                  Int       @id @default(autoincrement())
+  userId              Int
+  addressId           Int
+  wasteType           WasteType
+  enabled             Boolean   @default(true)
+  reminderHoursBefore Int       @default(12)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  address             Address   @relation(fields: [addressId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, addressId, wasteType])
+  @@index([enabled])
+}
+
+model WasteReminderDelivery {
+  id             Int       @id @default(autoincrement())
+  userId         Int
+  addressId      Int
+  wasteType      WasteType
+  collectionDate DateTime  @db.Date
+  createdAt      DateTime  @default(now())
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, addressId, wasteType, collectionDate])
+  @@index([collectionDate])
+}
+
+model EnvironmentalStation {
+  id               Int                        @id @default(autoincrement())
+  departmentId     Int?
+  name             String
+  description      String?
+  latitude         Decimal                    @db.Decimal(10, 7)
+  longitude        Decimal                    @db.Decimal(10, 7)
+  address          String?
+  source           InfrastructureDataSource   @default(MUNICIPALITY)
+  externalSourceId String?
+  sourceUrl        String?
+  lastSyncedAt     DateTime?
+  isActive         Boolean                    @default(true)
+  createdAt        DateTime                   @default(now())
+  updatedAt        DateTime                   @updatedAt
+  department       Department?                @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  measurements     EnvironmentalMeasurement[]
+
+  @@unique([source, externalSourceId])
+  @@index([departmentId, isActive])
+  @@index([latitude, longitude])
+}
+
+model EnvironmentalMeasurement {
+  id         Int                      @id @default(autoincrement())
+  stationId  Int
+  metric     EnvironmentalMetric
+  value      Decimal                  @db.Decimal(14, 4)
+  unit       String
+  measuredAt DateTime
+  source     InfrastructureDataSource @default(MUNICIPALITY)
+  createdAt  DateTime                 @default(now())
+  station    EnvironmentalStation     @relation(fields: [stationId], references: [id], onDelete: Cascade)
+
+  @@index([stationId, measuredAt])
+  @@index([metric, measuredAt])
+}
+
+model EmergencyAlert {
+  id               Int                      @id @default(autoincrement())
+  departmentId     Int?
+  createdById      Int
+  type             EmergencyAlertType
+  severity         EmergencyAlertSeverity
+  title            String
+  message          String                   @db.Text
+  latitude         Decimal?                 @db.Decimal(10, 7)
+  longitude        Decimal?                 @db.Decimal(10, 7)
+  radiusKm         Decimal?                 @db.Decimal(10, 2)
+  startsAt         DateTime
+  endsAt           DateTime?
+  isPublished      Boolean                  @default(false)
+  publishedAt      DateTime?
+  source           InfrastructureDataSource @default(MUNICIPALITY)
+  externalSourceId String?
+  sourceUrl        String?
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
+  department       Department?              @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  createdBy        User                     @relation("EmergencyAlertCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  notifications    Notification[]
+
+  @@unique([source, externalSourceId])
+  @@index([isPublished, startsAt, endsAt])
+  @@index([departmentId])
+  @@index([severity])
 }

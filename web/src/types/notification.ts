@@ -10,7 +10,9 @@ export type NotificationType =
   | "SERVICE_REQUEST_CREATED"
   | "SERVICE_REQUEST_ASSIGNED"
   | "SERVICE_REQUEST_STATUS_CHANGED"
-  | "SERVICE_REQUEST_COMPLETED";
+  | "SERVICE_REQUEST_COMPLETED"
+  | "EMERGENCY_ALERT"
+  | "WASTE_COLLECTION_REMINDER";
 
 export interface Notification {
   id: number;
@@ -22,6 +24,7 @@ export interface Notification {
   createdAt: string;
   report: { id: number; title: string; status: ReportStatus } | null;
   serviceRequest: { id: number; status: import("./service-request").ServiceRequestStatus; service: { title: string } } | null;
+  emergencyAlert: { id: number; title: string; severity: "ADVISORY" | "WATCH" | "WARNING" | "CRITICAL" } | null;
   actor: {
     id: number;
     firstName: string;
