@@ -31,7 +31,7 @@ export function Navbar() {
           <Link href="/" className="text-xl font-bold tracking-tight text-slate-950">
             <span className="text-emerald-600">City</span>zen
           </Link>
-          <div className="hidden items-center gap-5 md:flex"><Link href="/" className="text-sm font-medium text-slate-600 hover:text-emerald-700">Home</Link><Link href="/services" className="text-sm font-medium text-slate-600 hover:text-emerald-700">Services</Link><Link href="/city-map" className="text-sm font-medium text-slate-600 hover:text-emerald-700">Explore</Link><Link href="/waste" className="hidden text-sm font-medium text-slate-600 hover:text-emerald-700 lg:block">Waste</Link><Link href="/environment" className="hidden text-sm font-medium text-slate-600 hover:text-emerald-700 xl:block">Environment</Link><Link href="/alerts" className="hidden text-sm font-medium text-slate-600 hover:text-emerald-700 xl:block">Alerts</Link></div>
+          <div className="hidden items-center gap-5 md:flex"><Link href="/" className="text-sm font-medium text-slate-600 hover:text-emerald-700">Home</Link><Link href="/services" className="text-sm font-medium text-slate-600 hover:text-emerald-700">Services</Link><Link href="/community" className="text-sm font-medium text-slate-600 hover:text-emerald-700">Community</Link><Link href="/city-map" className="text-sm font-medium text-slate-600 hover:text-emerald-700">Explore</Link><Link href="/waste" className="hidden text-sm font-medium text-slate-600 hover:text-emerald-700 lg:block">Waste</Link><Link href="/environment" className="hidden text-sm font-medium text-slate-600 hover:text-emerald-700 xl:block">Environment</Link><Link href="/alerts" className="hidden text-sm font-medium text-slate-600 hover:text-emerald-700 xl:block">Alerts</Link></div>
         </div>
 
         {!isLoading && (
@@ -104,7 +104,7 @@ export function Navbar() {
             )}
           </div>
         )}
-        <div className="flex w-full flex-wrap items-center justify-center gap-5 border-t border-slate-100 pt-3 text-sm font-medium text-slate-600 md:hidden"><Link href="/services">Services</Link><Link href="/city-map">Explore</Link><Link href="/waste">Waste</Link><Link href="/environment">Environment</Link><Link href="/alerts">Alerts</Link>{user?.role === "CITIZEN" && <Link href="/my-services">My Requests</Link>}{user && user.role !== "CITIZEN" && <Link href="/municipality/service-requests">Service Requests</Link>}</div>
+        <div className="flex w-full flex-wrap items-center justify-center gap-5 border-t border-slate-100 pt-3 text-sm font-medium text-slate-600 md:hidden"><Link href="/services">Services</Link><Link href="/community">Community</Link><Link href="/city-map">Explore</Link><Link href="/waste">Waste</Link><Link href="/environment">Environment</Link><Link href="/alerts">Alerts</Link>{user?.role === "CITIZEN" && <Link href="/my-services">My Requests</Link>}{user && user.role !== "CITIZEN" && <Link href="/municipality/service-requests">Service Requests</Link>}</div>
       </nav>
     </header>
   );

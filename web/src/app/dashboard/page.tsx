@@ -8,6 +8,7 @@ import type { UserRole } from "@/types/user";
 
 const dashboardCards: Record<UserRole, { title: string; description: string; href?: string }[]> = {
   CITIZEN: [
+    { title: "Explore City Issues", description: "See public reports near you and support issues affecting your community.", href: "/community" },
     { title: "My Reports", description: "Track the city issues you have submitted.", href: "/reports" },
     { title: "Report an Issue", description: "Tell your municipality about a local problem.", href: "/reports/new" },
     { title: "City Services", description: "Discover services available in your city.", href: "/services" },
@@ -28,6 +29,7 @@ const dashboardCards: Record<UserRole, { title: string; description: string; hre
     { title: "Department", description: "View your department workspace." },
   ],
   DEPARTMENT_HEAD: [
+    { title: "Service Configuration", description: "Configure custom fields, documents, and appointment slots.", href: "/municipality/services/configuration" },
     { title: "Service Requests", description: "Review and assign requests for your department.", href: "/municipality/service-requests" },
     { title: "Department Reports", description: "Review issues routed to your department.", href: "/employee/reports" },
     { title: "Municipal Services", description: "Manage services published by your department.", href: "/municipality/services" },
@@ -38,6 +40,7 @@ const dashboardCards: Record<UserRole, { title: string; description: string; hre
     { title: "Environment & Safety", description: "Manage waste, stations and department alerts.", href: "/municipality/environment" },
   ],
   ADMIN: [
+    { title: "Service Configuration", description: "Configure advanced municipal service forms and appointments.", href: "/municipality/services/configuration" },
     { title: "Service Requests", description: "Oversee municipal service requests city-wide.", href: "/municipality/service-requests" },
     { title: "Reports", description: "Oversee city issue reporting activity.", href: "/employee/reports" },
     { title: "Users", description: "Manage citizen and municipality accounts." },

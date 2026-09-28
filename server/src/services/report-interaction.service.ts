@@ -39,7 +39,7 @@ async function visibleReport(reportId: number, authenticatedUser: AuthenticatedU
   const report = await database.report.findFirst({
     where: {
       id: reportId,
-      citizenId: authenticatedUser.role === UserRole.CITIZEN ? authenticatedUser.userId : undefined,
+      OR: authenticatedUser.role === UserRole.CITIZEN ? [{citizenId:authenticatedUser.userId},{isPublic:true,publicHiddenAt:null}] : undefined,
       assignedEmployeeId: authenticatedUser.role === UserRole.EMPLOYEE ? authenticatedUser.userId : undefined,
       departmentId: authenticatedUser.role === UserRole.DEPARTMENT_HEAD
         ? user?.departmentId ?? -1
@@ -51,6 +51,7 @@ async function visibleReport(reportId: number, authenticatedUser: AuthenticatedU
       assignedEmployeeId: true,
       title: true,
       status: true,
+      isPublic:true,
     },
   });
   if (!report) throw new AppError(404, "Report not found");
@@ -86,16 +87,17 @@ export async function createReportComment(
       select: commentSelect,
     });
     const actorName = `${comment.user.firstName} ${comment.user.lastName}`;
-    if (authenticatedUser.role === UserRole.CITIZEN && report.assignedEmployeeId) {
-      await createNotification({
-        userId: report.assignedEmployeeId,
-        actorId: authenticatedUser.userId,
-        reportId,
-        type: NotificationType.REPORT_COMMENT,
-        title: "New citizen comment",
-        message: `${actorName} commented on report #${report.id}.`,
-      }, transaction);
-    } else if (authenticatedUser.role !== UserRole.CITIZEN) {
+    if (authenticatedUser.role === UserRole.CITIZEN) {
+      if(report.citizenId!==authenticatedUser.userId&&report.isPublic)await createNotification({userId:report.citizenId,actorId:authenticatedUser.userId,reportId,type:NotificationType.REPORT_COMMENT,title:"New community comment",message:`Someone commented on your public report "${report.title}".`},transaction);
+      if(report.assignedEmployeeId&&report.assignedEmployeeId!==authenticatedUser.userId)await createNotification({
+          userId: report.assignedEmployeeId,
+          actorId: authenticatedUser.userId,
+          reportId,
+          type: NotificationType.REPORT_COMMENT,
+          title: "New citizen comment",
+          message: `${actorName} commented on report #${report.id}.`,
+        }, transaction);
+    } else {
       await createNotification({
         userId: report.citizenId,
         actorId: authenticatedUser.userId,
@@ -127,7 +129,9 @@ export async function deleteReportComment(
 }
 
 export async function toggleReportUpvote(reportId: number, citizenId: number) {
-  await visibleReport(reportId, { userId: citizenId, role: UserRole.CITIZEN });
+  const report=await visibleReport(reportId, { userId: citizenId, role: UserRole.CITIZEN });
+  if(!await database.report.findFirst({where:{id:reportId,isPublic:true,publicHiddenAt:null}}))throw new AppError(409,"Only public reports can be supported");
+  if(report.citizenId===citizenId)throw new AppError(409,"You cannot support your own report");
   return database.$transaction(async (transaction) => {
     const existing = await transaction.reportUpvote.findUnique({
       where: { reportId_userId: { reportId, userId: citizenId } },

@@ -120,6 +120,7 @@ export function toggleReportUpvote(reportId: number) {
     method: "POST",
   });
 }
+export function setReportVisibility(reportId:number,isPublic:boolean){return apiRequest<ReportResponse>(`/api/reports/${reportId}/visibility`,{method:"PATCH",body:{isPublic}})}
 
 export function getReportFeedback(reportId: number) {
   return apiRequest<ReportFeedbackResponse>(`/api/reports/${reportId}/feedback`);

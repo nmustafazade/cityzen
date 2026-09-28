@@ -19,6 +19,7 @@ import type {
   MyReportFilters,
 } from "../types/report.types";
 import { AppError } from "../utils/app-error";
+import{moderate,setVisibility,similarReports}from"../services/public-report.service";
 
 const reportStatuses = Object.values(ReportStatus);
 const reportPriorities = Object.values(ReportPriority);
@@ -130,6 +131,7 @@ function parseCreateBody(body: unknown): CreateReportInput {
     latitude: requiredCoordinate(input.latitude, "latitude", -90, 90),
     longitude: requiredCoordinate(input.longitude, "longitude", -180, 180),
     imageUrls: validImageUrls(input.imageUrls),
+    isPublic: input.isPublic === undefined ? false : input.isPublic === true,
   };
 }
 
@@ -143,6 +145,10 @@ export async function create(
     response.status(201).json({ report: await createReport(user.userId, parseCreateBody(request.body)) });
   } catch (error) { next(error); }
 }
+
+export async function similar(request:Request,response:Response,next:NextFunction){try{response.json({reports:await similarReports(positiveInteger(request.query.categoryId,"categoryId"),requiredCoordinate(request.query.latitude,"latitude",-90,90),requiredCoordinate(request.query.longitude,"longitude",-180,180),typeof request.query.title==="string"?request.query.title:undefined)})}catch(error){next(error)}}
+export async function visibility(request:Request,response:Response,next:NextFunction){try{if(typeof(request.body as Record<string,unknown>).isPublic!=="boolean")throw new AppError(400,"isPublic must be a boolean");response.json({report:await setVisibility(positiveInteger(request.params.id,"report id"),authenticatedUser(request),(request.body as Record<string,unknown>).isPublic as boolean)})}catch(error){next(error)}}
+export async function moderation(request:Request,response:Response,next:NextFunction){try{const body=request.body as Record<string,unknown>;if(typeof body.hidden!=="boolean")throw new AppError(400,"hidden must be a boolean");response.json({report:await moderate(positiveInteger(request.params.id,"report id"),authenticatedUser(request),body.hidden,optionalString(body.reason,"reason"))})}catch(error){next(error)}}
 
 export async function myReports(
   request: Request,

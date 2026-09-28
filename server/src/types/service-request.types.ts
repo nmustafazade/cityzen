@@ -8,6 +8,8 @@ export interface CreateServiceRequestInput {
   longitude?: number;
   preferredDate?: Date;
   contactPhone?: string;
+  appointmentSlotId?: number;
+  fields?: Record<string, unknown>;
 }
 
 export interface ServiceRequestFilters {

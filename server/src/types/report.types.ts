@@ -8,6 +8,7 @@ export interface CreateReportInput {
   latitude: number;
   longitude: number;
   imageUrls?: string[];
+  isPublic?: boolean;
 }
 
 export interface PaginationInput {

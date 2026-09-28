@@ -13,6 +13,8 @@ import { useAuth } from "@/context/AuthContext";
 import { ApiError } from "@/lib/api";
 import { formatCoordinate } from "@/lib/location";
 import { createReport, getReportCategories, uploadReportImages } from "@/lib/reports";
+import { getSimilarReports } from "@/lib/community";
+import { toggleReportUpvote } from "@/lib/reports";
 import type { Coordinates } from "@/types/location";
 import type { CreateReportData, ReportCategory } from "@/types/report";
 
@@ -36,6 +38,9 @@ function CreateReportContent() {
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [isPublic,setIsPublic]=useState(false);
+  const [similar,setSimilar]=useState<Array<{id:number;title:string;status:string;distanceMeters:number;supportCount:number}>>([]);
+  const [checking,setChecking]=useState(false);
 
   const handleApiError = useCallback((caughtError: unknown, fallback: string) => {
     if (caughtError instanceof ApiError && caughtError.status === 401) {
@@ -132,6 +137,7 @@ function CreateReportContent() {
           addressText: form.addressText.trim(),
           latitude: submissionCoordinates.latitude,
           longitude: submissionCoordinates.longitude,
+          isPublic,
         };
         const response = await createReport(data);
         reportId = response.report.id;
@@ -199,6 +205,9 @@ function CreateReportContent() {
           </div>
           <FormField label="Address" id="addressText" required value={form.addressText} onChange={update("addressText")} maxLength={180} />
           <LocationPicker coordinates={selectedCoordinates} onChange={updateLocation} disabled={isSubmitting} required />
+          <label className="flex items-start gap-3 rounded-xl border border-slate-200 p-4"><input type="checkbox" checked={isPublic} onChange={(event)=>setIsPublic(event.target.checked)} className="mt-1"/><span><strong className="block">Share this issue publicly</strong><span className="text-sm text-slate-600">Public pages hide your identity, exact address, and precise coordinates.</span></span></label>
+          {form.categoryId&&selectedCoordinates&&<button type="button" disabled={checking} onClick={async()=>{setChecking(true);try{setSimilar((await getSimilarReports({categoryId:Number(form.categoryId),latitude:selectedCoordinates.latitude,longitude:selectedCoordinates.longitude,title:form.title})).reports)}catch(caught){handleApiError(caught,"Unable to check similar issues.")}finally{setChecking(false)}}} className="rounded-lg border border-emerald-600 px-4 py-2 font-semibold text-emerald-700">{checking?"Checking...":"Check for Similar Issues"}</button>}
+          {similar.length>0&&<section className="rounded-xl border border-amber-200 bg-amber-50 p-4"><h2 className="font-bold">Similar issues already reported nearby</h2><div className="mt-3 space-y-3">{similar.map(item=><article key={item.id} className="rounded-lg bg-white p-3"><p className="font-semibold">{item.title}</p><p className="text-sm text-slate-600">{item.distanceMeters} m away · {item.status.replaceAll("_"," ")} · {item.supportCount} supporters</p><div className="mt-2 flex gap-4"><Link href={`/community/reports/${item.id}`} className="text-sm font-semibold text-emerald-700">View Issue</Link><button type="button" onClick={async()=>{await toggleReportUpvote(item.id);router.push(`/community/reports/${item.id}`)}} className="text-sm font-semibold text-emerald-700">Support Existing Issue</button></div></article>)}</div><p className="mt-3 text-sm">You may still continue and submit a new report.</p></section>}
           <ReportImagePicker maxFiles={5} onFilesChange={setImages} disabled={isSubmitting} />
           <button type="submit" disabled={isSubmitting || categories.length === 0} className="w-full rounded-xl bg-emerald-600 px-5 py-3 font-semibold text-white shadow-sm transition hover:bg-emerald-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 disabled:cursor-not-allowed disabled:bg-emerald-400">
             {isSubmitting ? "Submitting..." : createdReportId ? "Retry Photo Upload" : "Submit Report"}

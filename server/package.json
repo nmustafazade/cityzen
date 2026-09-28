@@ -12,6 +12,7 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "seed:municipal-content": "tsx prisma/seed-municipal-content.ts",
+    "seed:demo": "tsx prisma/seed-demo-data.ts",
     "import:osm-infrastructure": "tsx scripts/import-osm-infrastructure.ts"
   },
   "dependencies": {

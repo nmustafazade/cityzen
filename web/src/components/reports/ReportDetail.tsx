@@ -17,7 +17,7 @@ import { useAuth } from "@/context/AuthContext";
 import { ApiError } from "@/lib/api";
 import { formatDateTime } from "@/lib/format";
 import { coordinatesFromValues, formatCoordinate } from "@/lib/location";
-import { cancelReport, getReport, toggleReportUpvote, uploadReportImages } from "@/lib/reports";
+import { cancelReport, getReport, setReportVisibility, uploadReportImages } from "@/lib/reports";
 import type { Report } from "@/types/report";
 
 const cancellableStatuses = new Set(["SUBMITTED", "UNDER_REVIEW"]);
@@ -139,19 +139,19 @@ function ReportDetailContent({ reportId }: { reportId: string }) {
     }
   }
 
-  async function toggleUpvote() {
+  async function toggleVisibility() {
     if (!report || isUpvoting) return;
     setIsUpvoting(true);
     setInteractionError("");
     try {
-      const response = await toggleReportUpvote(report.id);
-      setReport({ ...report, hasUpvoted: response.upvoted, upvoteCount: response.upvoteCount });
+      const response = await setReportVisibility(report.id,!report.isPublic);
+      setReport({ ...report, isPublic: response.report.isPublic });
     } catch (caughtError) {
       if (caughtError instanceof ApiError && caughtError.status === 401) {
         logout();
         router.replace("/login");
       } else {
-        setInteractionError(caughtError instanceof ApiError ? caughtError.message : "Unable to update your support.");
+        setInteractionError(caughtError instanceof ApiError ? caughtError.message : "Unable to update public visibility.");
       }
     } finally {
       setIsUpvoting(false);
@@ -178,8 +178,8 @@ function ReportDetailContent({ reportId }: { reportId: string }) {
             <p className="mt-2 font-semibold text-emerald-700">{report.category.name}</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <button type="button" aria-pressed={Boolean(report.hasUpvoted)} onClick={() => void toggleUpvote()} disabled={isUpvoting} className={`rounded-lg border px-4 py-2.5 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 disabled:opacity-60 ${report.hasUpvoted ? "border-emerald-600 bg-emerald-50 text-emerald-800" : "border-slate-300 text-slate-700 hover:border-emerald-600"}`}>
-              ▲ {report.upvoteCount ?? 0} {report.hasUpvoted ? "Supported" : "Support this issue"}
+            <button type="button" aria-pressed={Boolean(report.isPublic)} onClick={() => void toggleVisibility()} disabled={isUpvoting} className={`rounded-lg border px-4 py-2.5 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 disabled:opacity-60 ${report.isPublic ? "border-emerald-600 bg-emerald-50 text-emerald-800" : "border-slate-300 text-slate-700 hover:border-emerald-600"}`}>
+              {report.isPublic ? "Publicly Shared" : "Share Publicly"}
             </button>
             {canCancel && !showCancelConfirmation && (
               <button type="button" onClick={() => setShowCancelConfirmation(true)} className="rounded-lg border border-red-200 px-4 py-2.5 text-sm font-semibold text-red-700 transition hover:bg-red-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600">Cancel Report</button>

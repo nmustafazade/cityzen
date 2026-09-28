@@ -73,6 +73,7 @@ export async function createReport(
       where: { id: input.categoryId, isActive: true },
       select: {
         id: true,
+        allowsPublicSharing:true,
         department: {
           select: {
             id: true,
@@ -93,6 +94,7 @@ export async function createReport(
     if (!category.department?.isActive) {
       throw new AppError(409, "This report category is not assigned to an active department");
     }
+    if(input.isPublic&&!category.allowsPublicSharing)throw new AppError(409,"This category does not allow public sharing");
 
     const report = await transaction.report.create({
       data: {
@@ -104,6 +106,7 @@ export async function createReport(
         addressText: input.addressText?.trim() || undefined,
         latitude: input.latitude,
         longitude: input.longitude,
+        isPublic:input.isPublic??false,
         images: input.imageUrls?.length
           ? { create: input.imageUrls.map((imageUrl) => ({ imageUrl })) }
           : undefined,

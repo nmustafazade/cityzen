@@ -1,0 +1,3 @@
+import type{ReportCategory,ReportImage,ReportPriority,ReportStatus,ReportStatusHistory}from"./report";
+export interface PublicReport{id:number;title:string;description:string;status:ReportStatus;priority:ReportPriority;addressText:null;latitude:number|null;longitude:number|null;createdAt:string;updatedAt:string;resolvedAt:string|null;category:Pick<ReportCategory,"id"|"name"|"icon">;department:{id:number;name:string}|null;images:ReportImage[];statusHistory?:ReportStatusHistory[];upvoteCount:number;commentCount:number}
+export interface PublicComment{id:number;content:string;createdAt:string;updatedAt:string;user:{displayName:string;role:import("./user").UserRole}}

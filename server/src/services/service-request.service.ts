@@ -5,11 +5,12 @@ import type { AuthenticatedUser } from "../types/auth.types";
 import type { CreateServiceRequestInput, ServiceRequestFilters, UpdateServiceRequestStatusInput } from "../types/service-request.types";
 import { AppError } from "../utils/app-error";
 import { createNotification } from "./notification.service";
+import { validateFieldValues } from "./advanced-service.service";
 
 const userSelect = { id: true, firstName: true, lastName: true, email: true, phone: true, profileImageUrl: true } as const;
 const employeeSelect = { id: true, firstName: true, lastName: true, profileImageUrl: true } as const;
 const listInclude = {
-  service: { select: { id: true, title: true, isActive: true } },
+  service: { select: { id: true, title: true, isActive: true,allowsDocuments:true,documentsRequired:true,maxDocuments:true } },
   department: { select: { id: true, name: true } },
   assignedEmployee: { select: employeeSelect },
 } as const;
@@ -17,6 +18,9 @@ const detailInclude = {
   ...listInclude,
   citizen: { select: userSelect },
   history: { orderBy: { createdAt: "asc" as const }, include: { changedBy: { select: employeeSelect } } },
+  fieldValues: { orderBy: { id: "asc" as const } },
+  documents: { orderBy: { createdAt: "asc" as const }, select: { id:true,originalFileName:true,mimeType:true,fileSize:true,createdAt:true } },
+  appointmentSlot: true,
 } as const;
 
 const transitions: Record<ServiceRequestStatus, ServiceRequestStatus[]> = {
@@ -53,19 +57,22 @@ export async function createServiceRequest(citizenId: number, input: CreateServi
   return database.$transaction(async (transaction) => {
     const service = await transaction.municipalService.findFirst({
       where: { id: input.serviceId, isActive: true, department: { isActive: true } },
-      select: { id: true, title: true, departmentId: true, department: { select: { name: true, employees: { where: { role: UserRole.DEPARTMENT_HEAD, isActive: true }, select: { id: true } } } } },
+      select: { id: true, title: true, departmentId: true, supportsAppointments:true,appointmentRequired:true,fields:{where:{isActive:true},orderBy:{sortOrder:"asc"}}, department: { select: { name: true, employees: { where: { role: UserRole.DEPARTMENT_HEAD, isActive: true }, select: { id: true } } } } },
     });
     if (!service) throw new AppError(400, "Municipal service does not exist or is inactive");
+    const values=validateFieldValues(service.fields,input.fields);
+    if(service.appointmentRequired&&!input.appointmentSlotId)throw new AppError(400,"An appointment is required for this service");
+    if(input.appointmentSlotId){if(!service.supportsAppointments)throw new AppError(400,"This service does not support appointments");const slot=await transaction.serviceAppointmentSlot.findFirst({where:{id:input.appointmentSlotId,serviceId:service.id,departmentId:service.departmentId,isActive:true,startsAt:{gt:new Date()}}});if(!slot)throw new AppError(400,"Appointment slot is invalid or unavailable");const booked=await transaction.serviceRequest.count({where:{appointmentSlotId:slot.id,status:{notIn:[ServiceRequestStatus.CANCELLED,ServiceRequestStatus.REJECTED]}}});if(booked>=slot.capacity)throw new AppError(409,"Appointment slot is fully booked")}
 
     const request = await transaction.serviceRequest.create({
-      data: { serviceId: service.id, citizenId, departmentId: service.departmentId, description: input.description.trim(), address: input.address?.trim() || undefined, latitude: input.latitude, longitude: input.longitude, preferredDate: input.preferredDate, contactPhone: input.contactPhone?.trim() || undefined },
+      data: { serviceId: service.id, citizenId, departmentId: service.departmentId, appointmentSlotId:input.appointmentSlotId,description: input.description.trim(), address: input.address?.trim() || undefined, latitude: input.latitude, longitude: input.longitude, preferredDate: input.preferredDate, contactPhone: input.contactPhone?.trim() || undefined,fieldValues:{create:values} },
     });
     await transaction.serviceRequestStatusHistory.create({ data: { serviceRequestId: request.id, oldStatus: null, newStatus: ServiceRequestStatus.SUBMITTED, changedById: citizenId } });
     for (const head of service.department.employees) {
       await createNotification({ userId: head.id, actorId: citizenId, serviceRequestId: request.id, type: NotificationType.SERVICE_REQUEST_CREATED, title: "New service request", message: `A new ${service.title} request has been submitted.` }, transaction);
     }
     return transaction.serviceRequest.findUniqueOrThrow({ where: { id: request.id }, include: detailInclude });
-  });
+  },{isolationLevel:Prisma.TransactionIsolationLevel.Serializable});
 }
 
 export async function listMyServiceRequests(citizenId: number, filters: ServiceRequestFilters) {

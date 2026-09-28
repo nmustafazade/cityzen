@@ -55,6 +55,18 @@ enum ServiceRequestStatus {
   CANCELLED
 }
 
+enum ServiceFieldType {
+  TEXT
+  TEXTAREA
+  NUMBER
+  DATE
+  DATETIME
+  SELECT
+  CHECKBOX
+  PHONE
+  EMAIL
+}
+
 enum RoadEventType {
   ACCIDENT
   ROAD_CLOSURE
@@ -212,32 +224,35 @@ model User {
   wasteReminderPreferences WasteReminderPreference[]
   wasteReminderDeliveries  WasteReminderDelivery[]
   createdEmergencyAlerts   EmergencyAlert[]              @relation("EmergencyAlertCreator")
+  uploadedServiceDocuments ServiceRequestDocument[]      @relation("ServiceDocumentUploader")
+  hiddenPublicReports      Report[]                      @relation("PublicReportHiddenBy")
 
   @@index([role])
   @@index([departmentId])
 }
 
 model Department {
-  id                    Int                    @id @default(autoincrement())
-  name                  String                 @unique
-  description           String?
-  isActive              Boolean                @default(true)
-  createdAt             DateTime               @default(now())
-  updatedAt             DateTime               @updatedAt
-  employees             User[]
-  reports               Report[]
-  categories            ReportCategory[]
-  services              MunicipalService[]
-  announcements         Announcement[]
-  cityEvents            CityEvent[]
-  serviceRequests       ServiceRequest[]
-  roadEvents            RoadEvent[]
-  parkingFacilities     ParkingFacility[]
-  cityFacilities        CityFacility[]
-  wasteZones            WasteCollectionZone[]
-  wasteFacilities       WasteFacility[]
-  environmentalStations EnvironmentalStation[]
-  emergencyAlerts       EmergencyAlert[]
+  id                      Int                      @id @default(autoincrement())
+  name                    String                   @unique
+  description             String?
+  isActive                Boolean                  @default(true)
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+  employees               User[]
+  reports                 Report[]
+  categories              ReportCategory[]
+  services                MunicipalService[]
+  announcements           Announcement[]
+  cityEvents              CityEvent[]
+  serviceRequests         ServiceRequest[]
+  roadEvents              RoadEvent[]
+  parkingFacilities       ParkingFacility[]
+  cityFacilities          CityFacility[]
+  wasteZones              WasteCollectionZone[]
+  wasteFacilities         WasteFacility[]
+  environmentalStations   EnvironmentalStation[]
+  emergencyAlerts         EmergencyAlert[]
+  serviceAppointmentSlots ServiceAppointmentSlot[]
 }
 
 model Address {
@@ -274,16 +289,17 @@ model SystemHealth {
 }
 
 model ReportCategory {
-  id           Int         @id @default(autoincrement())
-  name         String      @unique
-  description  String?
-  icon         String?
-  isActive     Boolean     @default(true)
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
-  departmentId Int?
-  department   Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
-  reports      Report[]
+  id                  Int         @id @default(autoincrement())
+  name                String      @unique
+  description         String?
+  icon                String?
+  isActive            Boolean     @default(true)
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+  departmentId        Int?
+  department          Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  allowsPublicSharing Boolean     @default(true)
+  reports             Report[]
 
   @@index([departmentId])
 }
@@ -302,6 +318,10 @@ model Report {
   departmentId       Int?
   assignedEmployeeId Int?
   resolvedAt         DateTime?
+  isPublic           Boolean               @default(false)
+  publicHiddenAt     DateTime?
+  publicHiddenById   Int?
+  publicHiddenReason String?
   createdAt          DateTime              @default(now())
   updatedAt          DateTime              @updatedAt
   citizen            User                  @relation("CitizenReports", fields: [citizenId], references: [id], onDelete: Restrict)
@@ -314,6 +334,7 @@ model Report {
   upvotes            ReportUpvote[]
   feedback           ReportFeedback?
   notifications      Notification[]
+  publicHiddenBy     User?                 @relation("PublicReportHiddenBy", fields: [publicHiddenById], references: [id], onDelete: SetNull)
 
   @@index([citizenId, createdAt])
   @@index([categoryId])
@@ -321,6 +342,8 @@ model Report {
   @@index([assignedEmployeeId])
   @@index([status, createdAt])
   @@index([priority])
+  @@index([isPublic, publicHiddenAt, createdAt])
+  @@index([publicHiddenById])
 }
 
 model ReportImage {
@@ -423,22 +446,29 @@ model Notification {
 }
 
 model MunicipalService {
-  id              Int              @id @default(autoincrement())
-  departmentId    Int
-  title           String
-  description     String           @db.Text
-  instructions    String?          @db.Text
-  requirements    String?          @db.Text
-  contactPhone    String?
-  contactEmail    String?
-  externalUrl     String?
-  address         String?
-  imageUrl        String?
-  isActive        Boolean          @default(true)
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  department      Department       @relation(fields: [departmentId], references: [id], onDelete: Restrict)
-  serviceRequests ServiceRequest[]
+  id                   Int                      @id @default(autoincrement())
+  departmentId         Int
+  title                String
+  description          String                   @db.Text
+  instructions         String?                  @db.Text
+  requirements         String?                  @db.Text
+  contactPhone         String?
+  contactEmail         String?
+  externalUrl          String?
+  address              String?
+  imageUrl             String?
+  isActive             Boolean                  @default(true)
+  allowsDocuments      Boolean                  @default(false)
+  documentsRequired    Boolean                  @default(false)
+  maxDocuments         Int                      @default(5)
+  supportsAppointments Boolean                  @default(false)
+  appointmentRequired  Boolean                  @default(false)
+  createdAt            DateTime                 @default(now())
+  updatedAt            DateTime                 @updatedAt
+  department           Department               @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  serviceRequests      ServiceRequest[]
+  fields               MunicipalServiceField[]
+  appointmentSlots     ServiceAppointmentSlot[]
 
   @@index([departmentId])
   @@index([isActive])
@@ -451,6 +481,7 @@ model ServiceRequest {
   citizenId            Int
   departmentId         Int
   assignedEmployeeId   Int?
+  appointmentSlotId    Int?
   status               ServiceRequestStatus          @default(SUBMITTED)
   description          String                        @db.Text
   address              String?
@@ -469,11 +500,89 @@ model ServiceRequest {
   assignedEmployee     User?                         @relation("AssignedServiceRequests", fields: [assignedEmployeeId], references: [id], onDelete: SetNull)
   history              ServiceRequestStatusHistory[]
   notifications        Notification[]
+  fieldValues          ServiceRequestFieldValue[]
+  documents            ServiceRequestDocument[]
+  appointmentSlot      ServiceAppointmentSlot?       @relation(fields: [appointmentSlotId], references: [id], onDelete: SetNull)
 
   @@index([citizenId, createdAt])
   @@index([departmentId, status])
   @@index([assignedEmployeeId, status])
   @@index([serviceId])
+  @@index([appointmentSlotId])
+}
+
+model MunicipalServiceField {
+  id          Int                        @id @default(autoincrement())
+  serviceId   Int
+  label       String
+  fieldKey    String
+  type        ServiceFieldType
+  description String?
+  placeholder String?
+  isRequired  Boolean                    @default(false)
+  options     Json?
+  minLength   Int?
+  maxLength   Int?
+  minValue    Decimal?                   @db.Decimal(14, 2)
+  maxValue    Decimal?                   @db.Decimal(14, 2)
+  sortOrder   Int                        @default(0)
+  isActive    Boolean                    @default(true)
+  createdAt   DateTime                   @default(now())
+  updatedAt   DateTime                   @updatedAt
+  service     MunicipalService           @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  values      ServiceRequestFieldValue[]
+
+  @@unique([serviceId, fieldKey])
+  @@index([serviceId, isActive, sortOrder])
+}
+
+model ServiceRequestFieldValue {
+  id                 Int                   @id @default(autoincrement())
+  serviceRequestId   Int
+  serviceFieldId     Int
+  value              Json
+  fieldLabelSnapshot String
+  fieldTypeSnapshot  ServiceFieldType
+  createdAt          DateTime              @default(now())
+  serviceRequest     ServiceRequest        @relation(fields: [serviceRequestId], references: [id], onDelete: Cascade)
+  serviceField       MunicipalServiceField @relation(fields: [serviceFieldId], references: [id], onDelete: Restrict)
+
+  @@unique([serviceRequestId, serviceFieldId])
+  @@index([serviceFieldId])
+}
+
+model ServiceAppointmentSlot {
+  id           Int              @id @default(autoincrement())
+  serviceId    Int
+  departmentId Int
+  startsAt     DateTime
+  endsAt       DateTime
+  capacity     Int              @default(1)
+  isActive     Boolean          @default(true)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  service      MunicipalService @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  department   Department       @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  requests     ServiceRequest[]
+
+  @@index([serviceId, isActive, startsAt])
+  @@index([departmentId])
+}
+
+model ServiceRequestDocument {
+  id               Int            @id @default(autoincrement())
+  serviceRequestId Int
+  fileUrl          String
+  originalFileName String
+  mimeType         String
+  fileSize         Int
+  uploadedById     Int
+  createdAt        DateTime       @default(now())
+  serviceRequest   ServiceRequest @relation(fields: [serviceRequestId], references: [id], onDelete: Cascade)
+  uploadedBy       User           @relation("ServiceDocumentUploader", fields: [uploadedById], references: [id], onDelete: Restrict)
+
+  @@index([serviceRequestId])
+  @@index([uploadedById])
 }
 
 model ServiceRequestStatusHistory {

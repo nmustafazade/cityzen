@@ -205,3 +205,25 @@ The environment dashboard uses the free Open-Meteo weather and air-quality APIs 
 Emergency alerts are published by authorized municipality users and displayed at `/alerts`, with active critical alerts shown in the application banner. Department heads are restricted to their own department and cannot publish city-wide alerts; administrators may publish city-wide alerts. Publishing a critical city-wide alert creates persistent citizen notifications without exposing private account data.
 
 Relevant environment variables are documented in `server/.env.example`. Demo environmental data is controlled by `ENABLE_ENVIRONMENT_DEMO_DATA`; it must remain clearly identified and should be disabled in production. OpenStreetMap-derived records retain source attribution and sync timestamps, and external failures never remove existing imported data.
+
+## Advanced services and community issues
+
+Municipal services may define typed custom fields, private document requirements, and appointment slots. Request values retain label/type snapshots, while appointment capacity is checked inside a serializable transaction. Department heads remain restricted to services owned by their department.
+
+Supporting documents accept PDF, JPEG, PNG, and WebP files up to 10 MB, with a service-specific maximum of five. Files are signature-checked, stored with generated names in `server/uploads/service-requests/`, blocked from static access, and available only through authorized download endpoints.
+
+Public issue discovery is available at `/community` and `/community/map`. Reports remain private by default. Public serializers omit citizen identity, exact addresses, assigned-employee details, and exact coordinates; map coordinates are rounded to three decimal places without changing stored data. Administrators may hide public reports without changing their workflow status.
+
+The controlled similar-issue check considers only public, unhidden, unresolved reports in the same category and within one kilometre. Results within 300 metres are prioritized, with lightweight title-token overlap as a secondary signal. Private reports are never candidates.
+
+### Development demo data
+
+After migrations are applied, populate missing development records across reports, services, appointments, infrastructure, waste, environment, and alerts with:
+
+```bash
+cd server
+npm run seed:municipal-content
+npm run seed:demo
+```
+
+The demo seed is idempotent and clearly marks sample infrastructure with the `DEMO` source. It preserves existing records and can safely be run again. The included citizen login is `demo.citizen@cityzen.test` with password `Password123`; change or remove demo credentials before production use.
