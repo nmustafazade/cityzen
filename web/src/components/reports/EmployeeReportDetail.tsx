@@ -13,6 +13,7 @@ import { ReportImageGallery } from "@/components/reports/ReportImageGallery";
 import { ReportError, ReportLoading } from "@/components/reports/ReportStates";
 import { ReportTimeline } from "@/components/reports/ReportTimeline";
 import { ResolutionFeedback } from "@/components/reports/ResolutionFeedback";
+import { SmartReportAssistant } from "@/components/reports/SmartReportAssistant";
 import { useAuth } from "@/context/AuthContext";
 import { ApiError } from "@/lib/api";
 import { formatDateTime, reportStatusLabels } from "@/lib/format";
@@ -245,6 +246,7 @@ function EmployeeReportDetailContent({ reportId }: { reportId: string }) {
         </div>
 
         <aside className="space-y-6">
+          <SmartReportAssistant reportId={report.id} />
           <Section title="Citizen">
             <CitizenSummary report={report} />
           </Section>

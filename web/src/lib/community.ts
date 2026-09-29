@@ -4,4 +4,4 @@ const query=(values:CommunityParams)=>{const q=new URLSearchParams();Object.entr
 export const getPublicReports=(params:CommunityParams={})=>apiRequest<{reports:PublicReport[];pagination:{page:number;limit:number;total:number;totalPages:number}}>(`/api/public/reports${query(params)}`);
 export const getPublicReport=(id:number)=>apiRequest<{report:PublicReport}>(`/api/public/reports/${id}`);
 export const getPublicComments=(id:number)=>apiRequest<{comments:PublicComment[]}>(`/api/public/reports/${id}/comments`);
-export const getSimilarReports=(params:{categoryId:number;latitude:number;longitude:number;title?:string})=>apiRequest<{reports:Array<Pick<PublicReport,"id"|"title"|"status"|"createdAt">&{distanceMeters:number;supportCount:number}>}>(`/api/reports/similar${query(params)}`);
+export const getSimilarReports=(params:{categoryId:number;latitude:number;longitude:number;title?:string})=>apiRequest<{reports:Array<Pick<PublicReport,"id"|"title"|"status"|"createdAt">&{distanceMeters:number;supportCount:number;similarityScore:number}>}>(`/api/reports/similar${query(params)}`);

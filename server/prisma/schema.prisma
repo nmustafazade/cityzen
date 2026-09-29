@@ -226,6 +226,7 @@ model User {
   createdEmergencyAlerts   EmergencyAlert[]              @relation("EmergencyAlertCreator")
   uploadedServiceDocuments ServiceRequestDocument[]      @relation("ServiceDocumentUploader")
   hiddenPublicReports      Report[]                      @relation("PublicReportHiddenBy")
+  aiAssistanceLogs         AiAssistanceLog[]
 
   @@index([role])
   @@index([departmentId])
@@ -342,6 +343,10 @@ model Report {
   @@index([assignedEmployeeId])
   @@index([status, createdAt])
   @@index([priority])
+  @@index([departmentId, createdAt])
+  @@index([departmentId, status, createdAt])
+  @@index([categoryId, status, createdAt])
+  @@index([resolvedAt])
   @@index([isPublic, publicHiddenAt, createdAt])
   @@index([publicHiddenById])
 }
@@ -416,6 +421,24 @@ model ReportFeedback {
   citizen   User     @relation("CitizenReportFeedback", fields: [citizenId], references: [id], onDelete: Restrict)
 
   @@index([citizenId])
+  @@index([rating, createdAt])
+}
+
+model AiAssistanceLog {
+  id            Int      @id @default(autoincrement())
+  userId        Int
+  feature       String
+  provider      String
+  targetType    String
+  targetId      Int?
+  inputSummary  String?
+  outputSummary String?
+  createdAt     DateTime @default(now())
+  user          User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([userId, createdAt])
+  @@index([feature, createdAt])
+  @@index([targetType, targetId])
 }
 
 model Notification {
@@ -509,6 +532,9 @@ model ServiceRequest {
   @@index([assignedEmployeeId, status])
   @@index([serviceId])
   @@index([appointmentSlotId])
+  @@index([departmentId, createdAt])
+  @@index([serviceId, status, createdAt])
+  @@index([completedAt])
 }
 
 model MunicipalServiceField {

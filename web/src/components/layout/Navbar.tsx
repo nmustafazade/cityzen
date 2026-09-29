@@ -58,12 +58,13 @@ export function Navbar() {
                 {(user.role === "EMPLOYEE" || user.role === "DEPARTMENT_HEAD" || user.role === "ADMIN") && (
                   <><Link href="/employee/reports" className="text-sm font-medium text-slate-700 hover:text-emerald-700">Reports</Link><Link href="/municipality/service-requests" className="hidden text-sm font-medium text-slate-700 hover:text-emerald-700 lg:block">Service Requests</Link></>
                 )}
-                {(user.role === "DEPARTMENT_HEAD" || user.role === "ADMIN") && <><Link href="/municipality/services" className="hidden text-sm font-medium text-slate-700 hover:text-emerald-700 lg:block">Publishing</Link><Link href="/municipality/infrastructure" className="hidden text-sm font-medium text-slate-700 hover:text-emerald-700 xl:block">Infrastructure</Link></>}
+                {(user.role === "DEPARTMENT_HEAD" || user.role === "ADMIN") && <><Link href="/municipality/services" className="hidden text-sm font-medium text-slate-700 hover:text-emerald-700 lg:block">Publishing</Link><Link href="/municipality/infrastructure" className="hidden text-sm font-medium text-slate-700 hover:text-emerald-700 xl:block">Infrastructure</Link>{user.role==="DEPARTMENT_HEAD"&&<Link href="/municipality/analytics" className="hidden text-sm font-medium text-slate-700 hover:text-emerald-700 xl:block">Analytics</Link>}</>}
                 {user.role === "ADMIN" && (
                   <>
                     <Link href="/admin/users" className="hidden text-sm font-medium text-slate-700 hover:text-emerald-700 lg:block">Users</Link>
                     <Link href="/admin/departments" className="hidden text-sm font-medium text-slate-700 hover:text-emerald-700 xl:block">Departments</Link>
                     <Link href="/admin/categories" className="hidden text-sm font-medium text-slate-700 hover:text-emerald-700 xl:block">Categories</Link>
+                    <Link href="/admin/analytics" className="hidden text-sm font-medium text-slate-700 hover:text-emerald-700 xl:block">Analytics</Link>
                   </>
                 )}
                 <Link

@@ -227,3 +227,19 @@ npm run seed:demo
 ```
 
 The demo seed is idempotent and clearly marks sample infrastructure with the `DEMO` source. It preserves existing records and can safely be run again. The included citizen login is `demo.citizen@cityzen.test` with password `Password123`; change or remove demo credentials before production use.
+
+## Analytics and smart assistance
+
+Administrators can open `/admin/analytics` for city-wide or department-filtered aggregates. Department heads use `/municipality/analytics` and are always restricted by the backend to their own department. Analytics cover reports, service requests, feedback, workload, trends, infrastructure, approximate geographic cells, and CSV export; citizen identities and exact report coordinates are not returned.
+
+Smart assistance defaults to the deterministic, local `RULE_BASED` provider and never changes category, priority, status, assignment, or responses automatically. Citizens may request a category suggestion, while authorized municipality staff may generate report summaries, priority suggestions, and editable response drafts. Assistance activity stores short metadata summaries for auditing, not passwords, tokens, or full prompts.
+
+Optional local Ollama text generation can be enabled without a paid API:
+
+```text
+AI_PROVIDER=RULE_BASED
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_MODEL=
+```
+
+Set `AI_PROVIDER=OLLAMA` and provide a locally installed model name to use Ollama for summaries and drafts. If Ollama is unavailable, Cityzen falls back to the rule-based provider. AI output is advisory and must be reviewed by a person.

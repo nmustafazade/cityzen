@@ -18,6 +18,8 @@ import { municipalityWasteRouter, wasteRouter } from "./routes/waste.routes";
 import { environmentRouter, municipalityEnvironmentRouter, weatherRouter } from "./routes/environment.routes";
 import { emergencyAlertRouter, municipalityEmergencyAlertRouter } from "./routes/emergency-alert.routes";
 import publicReportRouter from"./routes/public-report.routes";
+import analyticsRouter from "./routes/analytics.routes";
+import aiRouter from "./routes/ai.routes";
 
 const app = express();
 
@@ -47,6 +49,8 @@ app.use("/api/municipality/infrastructure", municipalityInfrastructureRouter);
 app.use("/api/municipality", municipalityRouter);
 app.use("/api/report-categories", reportCategoryRouter);
 app.use("/api/public/reports",publicReportRouter);
+app.use("/api/analytics", analyticsRouter);
+app.use("/api/ai", aiRouter);
 app.use("/api/reports", reportRouter);
 app.use("/api/service-requests", serviceRequestRouter);
 app.use("/api/infrastructure", infrastructureRouter);
