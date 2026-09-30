@@ -178,6 +178,10 @@ function CreateReportContent() {
         <p className="mt-3 text-slate-600">Tell us about a problem in your city.</p>
       </div>
 
+      <ol className="mt-8 grid grid-cols-4 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm" aria-label="Report creation steps">
+        {["Issue details","Category","Location & photos","Review"].map((step,index)=><li key={step} className="border-r border-slate-100 p-3 text-center last:border-0 sm:p-4"><span className="mx-auto grid size-7 place-items-center rounded-lg bg-teal-50 text-xs font-extrabold text-teal-700">{index+1}</span><span className="mt-2 hidden text-[11px] font-bold text-slate-600 sm:block">{step}</span></li>)}
+      </ol>
+
       {isLoadingCategories ? (
         <div className="mt-8"><ReportLoading message="Loading report form..." /></div>
       ) : (

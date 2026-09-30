@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import { Navbar } from "@/components/layout/Navbar";
-import { EmergencyBanner } from "@/components/layout/EmergencyBanner";
+import { Manrope } from "next/font/google";
+import { AppShell } from "@/components/layout/AppShell";
 import { AuthProvider } from "@/context/AuthContext";
 import { NotificationProvider } from "@/context/NotificationContext";
 import "./globals.css";
@@ -10,17 +10,15 @@ export const metadata: Metadata = {
   description: "Smart City Citizen & Municipality Platform",
 };
 
+const manrope=Manrope({subsets:["latin"],variable:"--font-manrope",display:"swap"});
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className="h-full antialiased">
-      <body className="min-h-full bg-slate-50 text-slate-950">
+    <html lang="en" className={`${manrope.variable} h-full antialiased`}>
+      <body className="min-h-full">
         <AuthProvider>
           <NotificationProvider>
-            <div className="flex min-h-screen flex-col">
-              <Navbar />
-              <EmergencyBanner />
-              {children}
-            </div>
+            <AppShell>{children}</AppShell>
           </NotificationProvider>
         </AuthProvider>
       </body>

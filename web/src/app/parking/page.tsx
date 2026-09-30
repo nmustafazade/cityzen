@@ -8,8 +8,8 @@ import { parkingTypeLabels, sourceLabels } from "@/types/infrastructure";
 
 function Availability({ item }: { item: ParkingFacility }) {
   return item.availableSpaces === null
-    ? <div className="mt-4"><p className="font-semibold text-slate-700">Availability information not provided</p><p className="mt-1 text-xs text-slate-500">Live availability unavailable</p></div>
-    : <div className="mt-4"><p className="text-2xl font-bold text-emerald-700">{item.availableSpaces}<span className="text-sm font-normal text-slate-500"> / {item.totalSpaces} spaces</span></p><p className="mt-1 text-xs text-slate-500">Current municipality-provided availability</p></div>;
+    ? <div className="mt-5 rounded-xl bg-slate-100 p-4"><p className="font-extrabold text-slate-700">Availability not provided</p><p className="mt-1 text-xs text-slate-500">Live occupancy data is unavailable</p></div>
+    : <div className="mt-5 rounded-xl bg-teal-50 p-4"><div className="flex items-end justify-between"><p className="text-3xl font-extrabold text-teal-800">{item.availableSpaces}<span className="text-sm font-semibold text-slate-500"> spaces</span></p><span className="text-xs font-bold text-teal-700">{item.totalSpaces?Math.round(item.availableSpaces/item.totalSpaces*100):0}% open</span></div><div className="mt-3 h-2 overflow-hidden rounded-full bg-teal-100"><div className="h-full rounded-full bg-teal-500" style={{width:`${item.totalSpaces?Math.min(100,item.availableSpaces/item.totalSpaces*100):0}%`}}/></div><p className="mt-2 text-xs text-slate-500">of {item.totalSpaces} total spaces</p></div>;
 }
 export default function ParkingPage() {
   const [items, setItems] = useState<ParkingFacility[]>([]), [loading, setLoading] = useState(true), [error, setError] = useState(""), [type, setType] = useState(""), [available, setAvailable] = useState(false), [reservable, setReservable] = useState(false), [ev, setEv] = useState(false), [accessible, setAccessible] = useState(false), [locating, setLocating] = useState(false);

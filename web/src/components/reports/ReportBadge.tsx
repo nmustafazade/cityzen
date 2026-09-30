@@ -21,10 +21,10 @@ const priorityStyles: Record<ReportPriority, string> = {
   URGENT: "border-red-200 bg-red-50 text-red-700",
 };
 
-const baseStyle = "inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold";
+const baseStyle = "inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[11px] font-extrabold tracking-wide";
 
 export function StatusBadge({ status }: { status: ReportStatus }) {
-  return <span className={`${baseStyle} ${statusStyles[status]}`}>{reportStatusLabels[status]}</span>;
+  return <span className={`${baseStyle} ${statusStyles[status]}`}><span className="size-1.5 rounded-full bg-current" aria-hidden />{reportStatusLabels[status]}</span>;
 }
 
 export function PriorityBadge({ priority }: { priority: ReportPriority }) {

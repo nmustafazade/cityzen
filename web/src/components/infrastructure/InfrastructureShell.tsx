@@ -1,5 +1,5 @@
-import Link from "next/link";
 import type { ReactNode } from "react";
+import { PageHeader } from "@/components/common/PageHeader";
 
-export function InfrastructureShell({ title, subtitle, children, action }: { title: string; subtitle: string; children: ReactNode; action?: { href: string; label: string } }) { return <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-10"><div className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-sm font-semibold uppercase tracking-[0.16em] text-emerald-700">City infrastructure</p><h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">{title}</h1><p className="mt-2 text-slate-600">{subtitle}</p></div>{action && <Link href={action.href} className="rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700">{action.label}</Link>}</div>{children}</main>; }
-export function StateMessage({ children }: { children: ReactNode }) { return <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-600">{children}</div>; }
+export function InfrastructureShell({ title, subtitle, children, action }: { title: string; subtitle: string; children: ReactNode; action?: { href: string; label: string } }) { return <main className="city-page"><PageHeader eyebrow="City infrastructure" title={title} subtitle={subtitle} action={action}/>{children}</main>; }
+export function StateMessage({ children }: { children: ReactNode }) { return <div className="surface-card mt-8 p-8 text-center text-sm text-slate-600">{children}</div>; }

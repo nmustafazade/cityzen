@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { MunicipalityRoute } from "@/components/auth/ProtectedRoute";
+import { FormLocationPicker } from "@/components/maps/FormLocationPicker";
 import { getManagedWasteFacilities, saveWasteFacility } from "@/lib/waste";
 import type { WasteFacility, WasteFacilityType, WasteType } from "@/types/waste";
 import { wasteFacilityLabels, wasteLabels } from "@/types/waste";
@@ -30,6 +31,7 @@ export default function WasteFacilitiesPage() {
       <label className="text-sm font-semibold sm:col-span-2">Address<input value={form.address} onChange={(e)=>setForm({...form,address:e.target.value})} className="mt-1 w-full rounded-lg border px-3 py-2" /></label>
       <label className="text-sm font-semibold">Latitude<input required type="number" step="any" min="-90" max="90" value={form.latitude} onChange={(e)=>setForm({...form,latitude:e.target.value})} className="mt-1 w-full rounded-lg border px-3 py-2" /></label>
       <label className="text-sm font-semibold">Longitude<input required type="number" step="any" min="-180" max="180" value={form.longitude} onChange={(e)=>setForm({...form,longitude:e.target.value})} className="mt-1 w-full rounded-lg border px-3 py-2" /></label>
+      <div className="sm:col-span-2"><FormLocationPicker latitude={form.latitude} longitude={form.longitude} required disabled={saving} onChange={(latitude, longitude) => setForm((current) => ({ ...current, latitude, longitude }))} /></div>
       <label className="text-sm font-semibold sm:col-span-2">Opening hours<input value={form.openingHours} onChange={(e)=>setForm({...form,openingHours:e.target.value})} className="mt-1 w-full rounded-lg border px-3 py-2" /></label>
       <fieldset className="sm:col-span-2"><legend className="text-sm font-semibold">Accepted waste</legend><div className="mt-2 flex flex-wrap gap-3">{wasteTypes.map((type)=><label key={type} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.acceptedTypes.includes(type)} onChange={()=>toggle(type)} />{wasteLabels[type]}</label>)}</div></fieldset>
       {error&&<p role="alert" className="text-sm text-red-700 sm:col-span-2">{error}</p>}

@@ -1,4 +1,7 @@
 import type { ReportPriority, ReportStatus } from "@/types/report";
+import type { UserRole } from "@/types/user";
+
+export const roleLabels:Record<UserRole,string>={CITIZEN:"Citizen",EMPLOYEE:"Municipality Employee",DEPARTMENT_HEAD:"Department Head",ADMIN:"Administrator"};
 
 export const reportStatusLabels: Record<ReportStatus, string> = {
   SUBMITTED: "Submitted",

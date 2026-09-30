@@ -15,10 +15,10 @@ export function ReportImageGallery({ images, reportTitle }: { images: ReportImag
   }
 
   return (
-    <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+    <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4">
       {displayImages.map((image, index) => (
-        <li key={image.id}>
-          <a href={image.resolvedUrl} target="_blank" rel="noreferrer" className="group relative block aspect-square overflow-hidden rounded-xl border border-slate-200 bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600">
+        <li key={image.id} className={index===0?"col-span-2 row-span-2 sm:col-span-3":""}>
+          <a href={image.resolvedUrl} target="_blank" rel="noreferrer" className={`group relative block overflow-hidden rounded-xl border border-slate-200 bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600 ${index===0?"aspect-[4/3]":"aspect-square"}`}>
             <Image
               loader={passthroughLoader}
               unoptimized
