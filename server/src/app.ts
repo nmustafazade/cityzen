@@ -8,16 +8,35 @@ import authRouter from "./routes/auth.routes";
 import healthRouter from "./routes/health.routes";
 import managementRouter from "./routes/management.routes";
 import notificationRouter from "./routes/notification.routes";
-import municipalityRouter, { announcementRouter, eventRouter, publicDepartmentRouter, serviceRouter } from "./routes/municipal-content.routes";
+import municipalityRouter, {
+  announcementRouter,
+  eventRouter,
+  publicDepartmentRouter,
+  serviceRouter,
+} from "./routes/municipal-content.routes";
 import reportCategoryRouter from "./routes/report-category.routes";
 import reportRouter from "./routes/report.routes";
-import { municipalityServiceRequestRouter, serviceRequestRouter } from "./routes/service-request.routes";
-import { facilityCategoryAdminRouter, infrastructureRouter, municipalityInfrastructureRouter } from "./routes/infrastructure.routes";
+import {
+  municipalityServiceRequestRouter,
+  serviceRequestRouter,
+} from "./routes/service-request.routes";
+import {
+  facilityCategoryAdminRouter,
+  infrastructureRouter,
+  municipalityInfrastructureRouter,
+} from "./routes/infrastructure.routes";
 import parkingReservationRouter from "./routes/parking-reservation.routes";
 import { municipalityWasteRouter, wasteRouter } from "./routes/waste.routes";
-import { environmentRouter, municipalityEnvironmentRouter, weatherRouter } from "./routes/environment.routes";
-import { emergencyAlertRouter, municipalityEmergencyAlertRouter } from "./routes/emergency-alert.routes";
-import publicReportRouter from"./routes/public-report.routes";
+import {
+  environmentRouter,
+  municipalityEnvironmentRouter,
+  weatherRouter,
+} from "./routes/environment.routes";
+import {
+  emergencyAlertRouter,
+  municipalityEmergencyAlertRouter,
+} from "./routes/emergency-alert.routes";
+import publicReportRouter from "./routes/public-report.routes";
 import analyticsRouter from "./routes/analytics.routes";
 import aiRouter from "./routes/ai.routes";
 
@@ -27,10 +46,14 @@ app.use(cors());
 app.use(express.json());
 app.use(
   "/uploads",
-  (request,response,next)=>request.path.startsWith("/service-requests/")?response.status(404).json({status:"error",message:"Not found"}):next(),
+  (request, response, next) =>
+    request.path.startsWith("/service-requests/")
+      ? response.status(404).json({ status: "error", message: "Not found" })
+      : next(),
   express.static(path.resolve(__dirname, "../uploads"), {
     dotfiles: "deny",
-    setHeaders: (response) => response.setHeader("X-Content-Type-Options", "nosniff"),
+    setHeaders: (response) =>
+      response.setHeader("X-Content-Type-Options", "nosniff"),
   }),
 );
 
@@ -48,7 +71,7 @@ app.use("/api/municipality/service-requests", municipalityServiceRequestRouter);
 app.use("/api/municipality/infrastructure", municipalityInfrastructureRouter);
 app.use("/api/municipality", municipalityRouter);
 app.use("/api/report-categories", reportCategoryRouter);
-app.use("/api/public/reports",publicReportRouter);
+app.use("/api/public/reports", publicReportRouter);
 app.use("/api/analytics", analyticsRouter);
 app.use("/api/ai", aiRouter);
 app.use("/api/reports", reportRouter);

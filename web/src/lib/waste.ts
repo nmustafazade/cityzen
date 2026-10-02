@@ -1,13 +1,83 @@
-import{apiRequest}from"./api";import type{WasteException,WasteFacility,WasteSchedule,WasteType,WasteZone}from"@/types/waste";
-const q=(values:Record<string,string|number|undefined>)=>{const p=new URLSearchParams();Object.entries(values).forEach(([k,v])=>v!==undefined&&v!==""&&p.set(k,String(v)));return p.size?`?${p}`:""};
-export const getWasteFacilities=(filters:Record<string,string|number|undefined>={})=>apiRequest<{facilities:WasteFacility[];pagination:{page:number;totalPages:number}}>(`/api/waste/facilities${q(filters)}`);
-export const getMyWasteSchedule=(addressId?:number)=>apiRequest<{addresses:Array<{id:number;label:string|null;city:string;district:string|null;wasteCollectionZoneId:number|null}>;zone:WasteZone|null;schedules:WasteSchedule[];exceptions:WasteException[];message?:string}>(`/api/waste/my-schedule${q({addressId})}`);
-export const getNextCollections=(zoneId:number)=>apiRequest<{zone:WasteZone;collections:Array<{wasteType:WasteType;date:string;collectionTime:string|null;note:string|null}>}>(`/api/waste/next-collections?zoneId=${zoneId}`);
-export const getWasteReminders=()=>apiRequest<{reminders:Array<{id:number;addressId:number;wasteType:WasteType;enabled:boolean;reminderHoursBefore:number}>}>("/api/waste/reminders");
-export const saveWasteReminder=(data:object)=>apiRequest("/api/waste/reminders",{method:"PUT",body:data});
-export const getManagedWasteZones=()=>apiRequest<{zones:Array<WasteZone&{schedules:WasteSchedule[];exceptions:WasteException[]}>}>("/api/municipality/waste/zones");
-export const saveWasteZone=(data:object,id?:number)=>apiRequest(`/api/municipality/waste/zones${id?`/${id}`:""}`,{method:id?"PATCH":"POST",body:data});
-export const saveWasteSchedule=(data:object,id?:number)=>apiRequest(`/api/municipality/waste/schedules${id?`/${id}`:""}`,{method:id?"PATCH":"POST",body:data});
-export const saveWasteException=(data:object)=>apiRequest("/api/municipality/waste/exceptions",{method:"POST",body:data});
-export const getManagedWasteFacilities=()=>apiRequest<{facilities:WasteFacility[]}>("/api/municipality/waste/facilities");
-export const saveWasteFacility=(data:object,id?:number)=>apiRequest(`/api/municipality/waste/facilities${id?`/${id}`:""}`,{method:id?"PATCH":"POST",body:data});
+import { apiRequest } from "./api";
+import type {
+  WasteException,
+  WasteFacility,
+  WasteSchedule,
+  WasteType,
+  WasteZone,
+} from "@/types/waste";
+const q = (values: Record<string, string | number | undefined>) => {
+  const p = new URLSearchParams();
+  Object.entries(values).forEach(
+    ([k, v]) => v !== undefined && v !== "" && p.set(k, String(v)),
+  );
+  return p.size ? `?${p}` : "";
+};
+export const getWasteFacilities = (
+  filters: Record<string, string | number | undefined> = {},
+) =>
+  apiRequest<{
+    facilities: WasteFacility[];
+    pagination: { page: number; totalPages: number };
+  }>(`/api/waste/facilities${q(filters)}`);
+export const getMyWasteSchedule = (addressId?: number) =>
+  apiRequest<{
+    addresses: Array<{
+      id: number;
+      label: string | null;
+      city: string;
+      district: string | null;
+      wasteCollectionZoneId: number | null;
+    }>;
+    zone: WasteZone | null;
+    schedules: WasteSchedule[];
+    exceptions: WasteException[];
+    message?: string;
+  }>(`/api/waste/my-schedule${q({ addressId })}`);
+export const getNextCollections = (zoneId: number) =>
+  apiRequest<{
+    zone: WasteZone;
+    collections: Array<{
+      wasteType: WasteType;
+      date: string;
+      collectionTime: string | null;
+      note: string | null;
+    }>;
+  }>(`/api/waste/next-collections?zoneId=${zoneId}`);
+export const getWasteReminders = () =>
+  apiRequest<{
+    reminders: Array<{
+      id: number;
+      addressId: number;
+      wasteType: WasteType;
+      enabled: boolean;
+      reminderHoursBefore: number;
+    }>;
+  }>("/api/waste/reminders");
+export const saveWasteReminder = (data: object) =>
+  apiRequest("/api/waste/reminders", { method: "PUT", body: data });
+export const getManagedWasteZones = () =>
+  apiRequest<{
+    zones: Array<
+      WasteZone & { schedules: WasteSchedule[]; exceptions: WasteException[] }
+    >;
+  }>("/api/municipality/waste/zones");
+export const saveWasteZone = (data: object, id?: number) =>
+  apiRequest(`/api/municipality/waste/zones${id ? `/${id}` : ""}`, {
+    method: id ? "PATCH" : "POST",
+    body: data,
+  });
+export const saveWasteSchedule = (data: object, id?: number) =>
+  apiRequest(`/api/municipality/waste/schedules${id ? `/${id}` : ""}`, {
+    method: id ? "PATCH" : "POST",
+    body: data,
+  });
+export const getManagedWasteFacilities = () =>
+  apiRequest<{ facilities: WasteFacility[] }>(
+    "/api/municipality/waste/facilities",
+  );
+export const saveWasteFacility = (data: object, id?: number) =>
+  apiRequest(`/api/municipality/waste/facilities${id ? `/${id}` : ""}`, {
+    method: id ? "PATCH" : "POST",
+    body: data,
+  });

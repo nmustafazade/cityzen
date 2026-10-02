@@ -1,149 +1,39 @@
 # Cityzen
 
-Cityzen is a smart-city platform that connects citizens with municipality services.
+Cityzen connects citizens with municipal services. Citizens report problems, request services, and follow progress. Employees handle assigned work, department heads manage their departments, and admins manage the city.
 
-Citizens can report city problems, request services, follow their requests, and find useful city information. Municipality workers can receive requests, assign work, update progress, and communicate with citizens.
+## Applications
 
-## Project structure
+- `web/`: Next.js, TypeScript, Tailwind CSS, Leaflet.
+- `server/`: Express, TypeScript, Prisma, MySQL.
+- `mobile/`: Expo, React Native, Expo Router. Citizen-focused; municipality tools remain on the web.
 
-- `web/` — Next.js web application
-- `server/` — Express API with Prisma and MySQL
-- `mobile/` — React Native application built with Expo
+## Main modules
 
-## Main features
+- Accounts with Citizen, Employee, Department Head, and Admin roles.
+- Issue reports with department routing, assignments, photos, maps, comments, upvotes, feedback, and notifications.
+- Municipal services and requests, including configurable forms, documents, and appointments on the web.
+- Announcements, events, emergency alerts, and public community reports.
+- Parking, facilities, road conditions, waste/recycling, weather, and environmental information.
+- Administration, analytics, and optional smart assistance.
 
-### Accounts and roles
+Mobile supports a subset of the web workflows. See [mobile setup](mobile/README.md) for device connection instructions.
 
-Cityzen supports four roles:
+## Local setup
 
-- **Citizen** — reports problems and requests services
-- **Employee** — works on assigned requests
-- **Department Head** — manages work for one department
-- **Admin** — manages the whole platform
+Use Node.js 22.13 or newer and MySQL. Run commands below from the repository root unless a directory is shown. Keep each development server in its own terminal.
 
-The platform uses JWT authentication. Passwords are hashed and are never returned by the API.
+### Backend and database
 
-### City issue reports
-
-Citizens can:
-
-- Create a report
-- Choose a category
-- Add an address and map location
-- Use their current location
-- Upload photos
-- View progress and status history
-- Add comments and replies
-- Support public reports with an upvote
-- Cancel a report when allowed
-- Rate the result after the problem is resolved
-
-Reports are automatically sent to the department linked to their category. A department head can assign the report only to employees in that department.
-
-### Municipal services
-
-Citizens can browse services and send online service requests. A request may include:
-
-- A description
-- Address and map location
-- Contact phone
-- Custom form fields
-- Appointment selection
-- Supporting documents
-
-The request is automatically sent to the department responsible for the selected service. Citizens can follow its status and read the municipality response.
-
-### Notifications
-
-Users receive notifications when important actions happen, such as:
-
-- A report or service request is assigned
-- A status changes
-- A new comment is added
-- A report is resolved
-- A service request is completed
-
-Notifications can be marked as read individually or all at once.
-
-### City information
-
-Cityzen also includes:
-
-- Announcements
-- Events
-- Emergency alerts
-- Road conditions
-- Parking information and reservations
-- Public facilities
-- Waste collection schedules
-- Recycling locations
-- Weather and air-quality information
-- Public community reports
-- A city map with selectable layers
-
-### Open map data
-
-Cityzen uses Leaflet and OpenStreetMap. The backend can import parking locations, public facilities, and mapped roadworks through the Overpass API.
-
-Imported data is saved in MySQL and updated without creating duplicates. OpenStreetMap parking data normally does not include live free-space counts, so Cityzen shows availability as unknown instead of displaying a false zero.
-
-### Administration
-
-Admins can manage:
-
-- Users and roles
-- Departments
-- Report categories
-- Municipal services
-- Announcements and events
-- Facility categories
-- City infrastructure
-- Analytics
-
-Department heads can manage only their own department. Employees can work only with requests assigned to them.
-
-## Technology
-
-### Web
-
-- Next.js
-- TypeScript
-- App Router
-- Tailwind CSS
-- Leaflet and OpenStreetMap
-
-### Server
-
-- Node.js
-- Express
-- TypeScript
-- Prisma ORM
-- MySQL
-- JWT and bcrypt
-
-### Mobile
-
-- React Native
-- Expo
-- Expo Router
-- TypeScript
-- Expo SecureStore
-- Expo Location
-- React Native Maps
-
-## Setup
-
-### 1. Database
-
-Install MySQL and create a database called `cityzen`.
-
-Copy the server environment file:
+Create a MySQL database called `cityzen`, then:
 
 ```bash
 cp server/.env.example server/.env
+cd server
+npm install
 ```
 
-Set at least these values in `server/.env`:
+Configure `server/.env`:
 
 ```env
 PORT=5051
@@ -152,42 +42,21 @@ JWT_SECRET=replace-with-a-long-random-secret
 JWT_EXPIRES_IN=1d
 ```
 
-If your local MySQL user has no password, the URL may look like this:
-
-```env
-DATABASE_URL="mysql://root@localhost:3306/cityzen"
-```
-
-Run the database migrations:
+For a local MySQL account without a password, omit the password portion of the URL. Never use that configuration for a public deployment.
 
 ```bash
-cd server
-npm install
 npx prisma generate
 npx prisma migrate dev
-```
-
-Do not run `prisma migrate reset` on a database that contains data you want to keep.
-
-### 2. Start the backend
-
-```bash
-cd server
 npm run dev
 ```
 
-The API runs at:
-
-```text
-http://localhost:5051
-```
+Keep migration history. Do not reset a database containing data you need.
 
 Health checks:
+- `http://localhost:5051/api/health`
+- `http://localhost:5051/api/health/database`
 
-- `GET http://localhost:5051/api/health`
-- `GET http://localhost:5051/api/health/database`
-
-### 3. Start the web application
+### Web
 
 ```bash
 cd web
@@ -196,19 +65,9 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Set this value in `web/.env.local`:
+Set `NEXT_PUBLIC_API_URL=http://localhost:5051`. Open `http://localhost:3000`.
 
-```env
-NEXT_PUBLIC_API_URL=http://localhost:5051
-```
-
-Open:
-
-```text
-http://localhost:3000
-```
-
-### 4. Start the mobile application
+### Mobile
 
 ```bash
 cd mobile
@@ -217,39 +76,18 @@ cp .env.example .env
 npm start
 ```
 
-Set the API address in `mobile/.env`:
+Set `EXPO_PUBLIC_API_URL` to the backend address reachable from the device:
+- Physical phone: your computer's current LAN IP, with port `5051`; use the same Wi-Fi.
+- iOS Simulator: `http://localhost:5051`.
+- Android emulator: `http://10.0.2.2:5051`.
 
-```env
-EXPO_PUBLIC_API_URL=http://YOUR_LOCAL_IP:5051
-```
+Use Expo Go with a compatible SDK, or `npm run ios` / `npm run android` with a configured simulator/emulator. After changing the API address, restart with `npx expo start --clear`. Browser export of the native app is not configured; use `web/` for browsers.
 
-Use your computer's local network IP when testing on a physical phone. The phone and computer should be connected to the same Wi-Fi network.
+Do not commit local environment files. The example files contain no private keys.
 
-After Expo starts, open Expo Go on your phone and scan the QR code.
+## Development data and uploads
 
-Other useful commands:
-
-```bash
-npm run ios
-npm run android
-npm run typecheck
-npm run lint
-```
-
-## File uploads
-
-During development, uploaded files are stored locally inside `server/uploads/`.
-
-- Report photos: JPEG, PNG, or WebP
-- Maximum report photos: 5
-- Maximum report photo size: 5 MB each
-- Service documents: PDF, JPEG, PNG, or WebP
-
-Uploaded files are ignored by Git. A production version should use permanent object storage instead of the local filesystem.
-
-## Sample data
-
-After applying migrations, development data can be added with:
+After migrations, these optional commands add development data:
 
 ```bash
 cd server
@@ -257,20 +95,19 @@ npm run seed:municipal-content
 npm run seed:demo
 ```
 
-The seed commands are safe to run more than once and do not delete existing records.
+Create departments first. Seeds reuse existing records; they do not reset the database. They can update matching demo records, so use them only on a development database.
 
-Demo citizen account:
+The demo seed creates `demo.citizen@cityzen.test` with `Password123` if that account does not exist. It does not reset an existing account's password. Never use demo credentials in production.
 
-```text
-Email: demo.citizen@cityzen.test
-Password: Password123
-```
+Uploads live in `server/uploads/` and are ignored by Git:
+- Report photos: JPEG/PNG/WebP, up to five files, 5 MB each.
+- Service documents: PDF/JPEG/PNG/WebP, served through authorized API access, not public static URLs.
 
-Change or remove demo accounts before production use.
+Back up uploads and use persistent/object storage for production.
 
-## OpenStreetMap import
+## External data
 
-Add a small city bounding box to `server/.env`:
+Set a small geographic bounding box in `server/.env`:
 
 ```env
 OVERPASS_API_URL=https://overpass-api.de/api/interpreter
@@ -280,46 +117,27 @@ OSM_IMPORT_NORTH=
 OSM_IMPORT_EAST=
 ```
 
-Then run:
+Then run `npm run import:osm-infrastructure` from `server/`. This imports parking, facilities, and mapped roadworks into MySQL. Repeated imports update matching source IDs without replacing municipality records.
+
+OpenStreetMap data may be incomplete. Parking availability can be unknown, and mapped roadworks are not live traffic. Keep the © OpenStreetMap contributors attribution. Optional open-data/HERE traffic sources and AI provider settings are documented in `server/.env.example`; paid providers are not required. Keep demo infrastructure disabled in production.
+
+## Checks
 
 ```bash
-cd server
-npm run import:osm-infrastructure
-```
-
-OpenStreetMap data may be incomplete and roadwork information may not be live. Cityzen keeps municipality data separate and does not overwrite it during imports.
-
-## Quality checks
-
-Backend:
-
-```bash
-cd server
+# server/
+npx prisma format
+npx prisma validate
+npx prisma generate
 npm run build
-```
 
-Web:
-
-```bash
-cd web
+# web/
 npm run lint
 npm run build
-```
 
-Mobile:
-
-```bash
-cd mobile
+# mobile/
 npm run typecheck
 npm run lint
 npx expo-doctor
 ```
 
-## Important notes
-
-- The backend is the final authority for permissions.
-- Citizens cannot choose their role, department, employee, priority, or request status.
-- Department heads can work only inside their department.
-- Employees can update only work assigned to them.
-- External map and weather services may sometimes be unavailable, but saved Cityzen data will continue to work.
-- No paid map service is required.
+Backend authorization is authoritative. Department and assignment restrictions apply regardless of what the interface displays.

@@ -43,6 +43,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 .public-header { position: sticky; top: 0; z-index: 60; border-bottom: 1px solid rgb(255 255 255 / .08); background: rgb(7 29 43 / .97); box-shadow: 0 10px 35px rgb(7 29 43 / .12); backdrop-filter: blur(18px); }
 .public-nav-link { border-radius: .7rem; padding: .65rem .85rem; font-size: .875rem; font-weight: 700; color: #cbd5e1; }
 .public-nav-link:hover { background: rgb(255 255 255 / .08); color: white; }
+.public-nav-link[aria-current="page"], .public-nav-active { background: rgb(45 212 191 / .18); color: #5eead4; box-shadow: inset 0 -2px #2dd4bf; }
 .app-sidebar { position: fixed; inset: 0 auto 0 0; z-index: 80; display: flex; width: 272px; flex-direction: column; overflow: hidden; background: linear-gradient(180deg,var(--navy),#092531 58%,#0b332f); color: white; box-shadow: 18px 0 45px rgb(7 29 43 / .13); }
 .sidebar-scroll { flex: 1; overflow-y: auto; padding: .25rem 1rem 2rem; scrollbar-width: thin; scrollbar-color: rgb(255 255 255 / .16) transparent; }
 .sidebar-label { margin: 0 .75rem .45rem; font-size: .625rem; font-weight: 800; letter-spacing: .18em; color: #7896a3; text-transform: uppercase; }
@@ -88,7 +89,7 @@ main button.bg-emerald-600,main a.bg-emerald-600 { background:#0f766e; box-shado
 main button.bg-emerald-600:hover,main a.bg-emerald-600:hover { background:#115e59; }
 main .text-emerald-700 { color:#0f766e; }
 
-@media (min-width:1024px) { .lg\:pl-\[248px\] { padding-left:272px !important; }.lg\:pl-\[248px\] .app-sidebar { top:72px; height:calc(100vh - 72px); }.lg\:pl-\[248px\] .app-sidebar>div:first-child { display:none; } }
+@media (max-width: 639px) { .notification-popover { position: fixed; top: 76px; right: 1rem; }.public-header .cityzen-brand-wordmark { display: none; } }
 @media (max-width: 1023px) { .app-content { min-height:calc(100vh - 72px); } }
 @media (max-width: 640px) { .workspace-topbar { padding-inline:1rem; }.city-page { padding:1.5rem 1rem 5rem; }.city-page-header { align-items:flex-start; flex-direction:column; } }
 @media (prefers-reduced-motion: reduce) { *,*::before,*::after { scroll-behavior:auto !important; animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; } }

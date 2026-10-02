@@ -5,6 +5,10 @@ node_modules/
 .next/
 out/
 
+# Expo
+.expo/
+web-build/
+
 # Build output
 dist/
 build/
@@ -33,6 +37,11 @@ pnpm-debug.log*
 # System files
 .DS_Store
 Thumbs.db
+
+# Local editor backups
+*.tmp
+*.bak
+*.backup
 
 # Deployment
 .vercel/

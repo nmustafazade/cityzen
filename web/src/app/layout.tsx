@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Manrope } from "next/font/google";
 import { AppShell } from "@/components/layout/AppShell";
 import { AuthProvider } from "@/context/AuthContext";
@@ -16,11 +17,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${manrope.variable} h-full antialiased`}>
       <body className="min-h-full">
-        <AuthProvider>
-          <NotificationProvider>
-            <AppShell>{children}</AppShell>
-          </NotificationProvider>
-        </AuthProvider>
+        <Suspense fallback={<p role="status" className="p-8">Loading Cityzen…</p>}>
+          <AuthProvider>
+            <NotificationProvider>
+              <AppShell>{children}</AppShell>
+            </NotificationProvider>
+          </AuthProvider>
+        </Suspense>
       </body>
     </html>
   );

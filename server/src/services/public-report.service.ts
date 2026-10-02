@@ -1,13 +1,271 @@
-import{Prisma,ReportStatus,UserRole}from"@prisma/client";import database from"../config/database";import type{AuthenticatedUser}from"../types/auth.types";import{AppError}from"../utils/app-error";
-const visibleStatuses=[ReportStatus.SUBMITTED,ReportStatus.UNDER_REVIEW,ReportStatus.ASSIGNED,ReportStatus.IN_PROGRESS,ReportStatus.RESOLVED];
-const approx=(value:Prisma.Decimal|null)=>value==null?null:Math.round(Number(value)*1000)/1000;
-const baseInclude={category:{select:{id:true,name:true,icon:true}},department:{select:{id:true,name:true}},images:{select:{id:true,imageUrl:true,createdAt:true}},_count:{select:{upvotes:true,comments:true}}}as const;
-function serialize(report:Awaited<ReturnType<typeof findOne>>){const{_count,latitude,longitude,...safe}=report;return{...safe,latitude:approx(latitude),longitude:approx(longitude),addressText:null,upvoteCount:_count.upvotes,commentCount:_count.comments}}
-async function findOne(id:number){const report=await database.report.findFirst({where:{id,isPublic:true,publicHiddenAt:null},include:{...baseInclude,statusHistory:{select:{id:true,oldStatus:true,newStatus:true,note:true,createdAt:true},orderBy:{createdAt:"asc"}}}});if(!report)throw new AppError(404,"Public report not found");return report}
-export async function publicReports(filters:{status?:ReportStatus;categoryId?:number;departmentId?:number;search?:string;page:number;limit:number;sort:"newest"|"supported"|"updated";bounds?:{north:number;south:number;east:number;west:number}}){const where:Prisma.ReportWhereInput={isPublic:true,publicHiddenAt:null,status:filters.status??{in:visibleStatuses},categoryId:filters.categoryId,departmentId:filters.departmentId,OR:filters.search?[{title:{contains:filters.search}},{description:{contains:filters.search}}]:undefined,latitude:filters.bounds?{gte:filters.bounds.south,lte:filters.bounds.north}:undefined,longitude:filters.bounds?{gte:filters.bounds.west,lte:filters.bounds.east}:undefined};const orderBy:Prisma.ReportOrderByWithRelationInput=filters.sort==="supported"?{upvotes:{_count:"desc"}}:filters.sort==="updated"?{updatedAt:"desc"}:{createdAt:"desc"};const[rows,total]=await database.$transaction([database.report.findMany({where,include:baseInclude,orderBy,skip:(filters.page-1)*filters.limit,take:filters.limit}),database.report.count({where})]);return{reports:rows.map(row=>{const{_count,latitude,longitude,...safe}=row;return{...safe,description:safe.description.length>240?`${safe.description.slice(0,237)}...`:safe.description,latitude:approx(latitude),longitude:approx(longitude),addressText:null,upvoteCount:_count.upvotes,commentCount:_count.comments}}),pagination:{page:filters.page,limit:filters.limit,total,totalPages:Math.ceil(total/filters.limit)}}}
-export async function publicReport(id:number){return serialize(await findOne(id))}
-export async function publicComments(id:number){await findOne(id);const rows=await database.reportComment.findMany({where:{reportId:id},select:{id:true,content:true,createdAt:true,updatedAt:true,user:{select:{role:true,firstName:true,lastName:true}}},orderBy:{createdAt:"asc"}});return rows.map(row=>({...row,user:{displayName:row.user.role===UserRole.CITIZEN?`${row.user.firstName} ${row.user.lastName.charAt(0)}.`:row.user.role===UserRole.EMPLOYEE?"Municipality Employee":row.user.role===UserRole.DEPARTMENT_HEAD?"Department Head":"Administrator",role:row.user.role}}))}
-export async function setVisibility(id:number,user:AuthenticatedUser,isPublic:boolean){const report=await database.report.findUnique({where:{id},include:{category:{select:{allowsPublicSharing:true}}}});if(!report)throw new AppError(404,"Report not found");if(user.role!==UserRole.ADMIN&&report.citizenId!==user.userId)throw new AppError(403,"Only the owner may change visibility");if(isPublic&&!report.category.allowsPublicSharing)throw new AppError(409,"This category does not allow public sharing");return database.report.update({where:{id},data:{isPublic}})}
-export async function moderate(id:number,user:AuthenticatedUser,hidden:boolean,reason?:string){if(user.role!==UserRole.ADMIN)throw new AppError(403,"Administrator access required");if(!await database.report.findUnique({where:{id},select:{id:true}}))throw new AppError(404,"Report not found");return database.report.update({where:{id},data:{publicHiddenAt:hidden?new Date():null,publicHiddenById:hidden?user.userId:null,publicHiddenReason:hidden?reason||"Hidden by administrator":null}})}
-const distance=(a:number,b:number,c:number,d:number)=>{const r=(n:number)=>n*Math.PI/180,x=r(c-a),y=r(d-b),h=Math.sin(x/2)**2+Math.cos(r(a))*Math.cos(r(c))*Math.sin(y/2)**2;return 6371000*2*Math.atan2(Math.sqrt(h),Math.sqrt(1-h))};
-export async function similarReports(categoryId:number,latitude:number,longitude:number,title?:string){const delta=1/80;const rows=await database.report.findMany({where:{categoryId,isPublic:true,publicHiddenAt:null,status:{in:[ReportStatus.SUBMITTED,ReportStatus.UNDER_REVIEW,ReportStatus.ASSIGNED,ReportStatus.IN_PROGRESS]},latitude:{gte:latitude-delta,lte:latitude+delta},longitude:{gte:longitude-delta,lte:longitude+delta}},include:{category:{select:{id:true,name:true}},_count:{select:{upvotes:true}}},take:50});const tokens=new Set((title??"").toLowerCase().replace(/[^a-z0-9\s]/g," ").split(/\s+/).filter(x=>x.length>2));return rows.map(row=>{const distanceMeters=Math.round(distance(latitude,longitude,Number(row.latitude),Number(row.longitude))),titleScore=tokens.size?[...tokens].filter(token=>row.title.toLowerCase().includes(token)).length/tokens.size:0,recency=Math.max(0,1-(Date.now()-row.createdAt.getTime())/(90*86400000));return{...row,distanceMeters,supportCount:row._count.upvotes,titleScore,similarityScore:+Math.min(1,.4+Math.max(0,1-distanceMeters/1000)*.35+titleScore*.2+recency*.05).toFixed(2)}}).filter(row=>row.distanceMeters<=1000).sort((a,b)=>b.similarityScore-a.similarityScore).slice(0,5).map(({_count,titleScore,latitude:_lat,longitude:_lon,citizenId:_citizen,...row})=>row)}
+import { distanceKm } from "../utils/distance";
+import { Prisma, ReportStatus, UserRole } from "@prisma/client";
+import database from "../config/database";
+import type { AuthenticatedUser } from "../types/auth.types";
+import { AppError } from "../utils/app-error";
+const visibleStatuses = [
+  ReportStatus.SUBMITTED,
+  ReportStatus.UNDER_REVIEW,
+  ReportStatus.ASSIGNED,
+  ReportStatus.IN_PROGRESS,
+  ReportStatus.RESOLVED,
+];
+const approx = (value: Prisma.Decimal | null) =>
+  value == null ? null : Math.round(Number(value) * 1000) / 1000;
+const baseInclude = {
+  category: { select: { id: true, name: true, icon: true } },
+  department: { select: { id: true, name: true } },
+  images: { select: { id: true, imageUrl: true, createdAt: true } },
+  _count: { select: { upvotes: true, comments: true } },
+} as const;
+function serialize(report: Awaited<ReturnType<typeof findOne>>) {
+  const { _count, latitude, longitude, ...safe } = report;
+  return {
+    ...safe,
+    latitude: approx(latitude),
+    longitude: approx(longitude),
+    addressText: null,
+    upvoteCount: _count.upvotes,
+    commentCount: _count.comments,
+  };
+}
+async function findOne(id: number) {
+  const report = await database.report.findFirst({
+    where: { id, isPublic: true, publicHiddenAt: null },
+    include: {
+      ...baseInclude,
+      statusHistory: {
+        select: {
+          id: true,
+          oldStatus: true,
+          newStatus: true,
+          note: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: "asc" },
+      },
+    },
+  });
+  if (!report) throw new AppError(404, "Public report not found");
+  return report;
+}
+export async function publicReports(filters: {
+  status?: ReportStatus;
+  categoryId?: number;
+  departmentId?: number;
+  search?: string;
+  page: number;
+  limit: number;
+  sort: "newest" | "supported" | "updated";
+  bounds?: { north: number; south: number; east: number; west: number };
+}) {
+  const where: Prisma.ReportWhereInput = {
+    isPublic: true,
+    publicHiddenAt: null,
+    status: filters.status ?? { in: visibleStatuses },
+    categoryId: filters.categoryId,
+    departmentId: filters.departmentId,
+    OR: filters.search
+      ? [
+          { title: { contains: filters.search } },
+          { description: { contains: filters.search } },
+        ]
+      : undefined,
+    latitude: filters.bounds
+      ? { gte: filters.bounds.south, lte: filters.bounds.north }
+      : undefined,
+    longitude: filters.bounds
+      ? { gte: filters.bounds.west, lte: filters.bounds.east }
+      : undefined,
+  };
+  const orderBy: Prisma.ReportOrderByWithRelationInput =
+    filters.sort === "supported"
+      ? { upvotes: { _count: "desc" } }
+      : filters.sort === "updated"
+        ? { updatedAt: "desc" }
+        : { createdAt: "desc" };
+  const [rows, total] = await database.$transaction([
+    database.report.findMany({
+      where,
+      include: baseInclude,
+      orderBy,
+      skip: (filters.page - 1) * filters.limit,
+      take: filters.limit,
+    }),
+    database.report.count({ where }),
+  ]);
+  return {
+    reports: rows.map((row) => {
+      const { _count, latitude, longitude, ...safe } = row;
+      return {
+        ...safe,
+        description:
+          safe.description.length > 240
+            ? `${safe.description.slice(0, 237)}...`
+            : safe.description,
+        latitude: approx(latitude),
+        longitude: approx(longitude),
+        addressText: null,
+        upvoteCount: _count.upvotes,
+        commentCount: _count.comments,
+      };
+    }),
+    pagination: {
+      page: filters.page,
+      limit: filters.limit,
+      total,
+      totalPages: Math.ceil(total / filters.limit),
+    },
+  };
+}
+export async function publicReport(id: number) {
+  return serialize(await findOne(id));
+}
+export async function publicComments(id: number) {
+  await findOne(id);
+  const rows = await database.reportComment.findMany({
+    where: { reportId: id },
+    select: {
+      id: true,
+      content: true,
+      createdAt: true,
+      updatedAt: true,
+      user: { select: { role: true, firstName: true, lastName: true } },
+    },
+    orderBy: { createdAt: "asc" },
+  });
+  return rows.map((row) => ({
+    ...row,
+    user: {
+      displayName:
+        row.user.role === UserRole.CITIZEN
+          ? `${row.user.firstName} ${row.user.lastName.charAt(0)}.`
+          : row.user.role === UserRole.EMPLOYEE
+            ? "Municipality Employee"
+            : row.user.role === UserRole.DEPARTMENT_HEAD
+              ? "Department Head"
+              : "Administrator",
+      role: row.user.role,
+    },
+  }));
+}
+export async function setVisibility(
+  id: number,
+  user: AuthenticatedUser,
+  isPublic: boolean,
+) {
+  const report = await database.report.findUnique({
+    where: { id },
+    include: { category: { select: { allowsPublicSharing: true } } },
+  });
+  if (!report) throw new AppError(404, "Report not found");
+  if (user.role !== UserRole.ADMIN && report.citizenId !== user.userId)
+    throw new AppError(403, "Only the owner may change visibility");
+  if (isPublic && !report.category.allowsPublicSharing)
+    throw new AppError(409, "This category does not allow public sharing");
+  return database.report.update({ where: { id }, data: { isPublic } });
+}
+export async function moderate(
+  id: number,
+  user: AuthenticatedUser,
+  hidden: boolean,
+  reason?: string,
+) {
+  if (user.role !== UserRole.ADMIN)
+    throw new AppError(403, "Administrator access required");
+  if (
+    !(await database.report.findUnique({ where: { id }, select: { id: true } }))
+  )
+    throw new AppError(404, "Report not found");
+  return database.report.update({
+    where: { id },
+    data: {
+      publicHiddenAt: hidden ? new Date() : null,
+      publicHiddenById: hidden ? user.userId : null,
+      publicHiddenReason: hidden ? reason || "Hidden by administrator" : null,
+    },
+  });
+}
+export async function similarReports(
+  categoryId: number,
+  latitude: number,
+  longitude: number,
+  title?: string,
+) {
+  const delta = 1 / 80;
+  const rows = await database.report.findMany({
+    where: {
+      categoryId,
+      isPublic: true,
+      publicHiddenAt: null,
+      status: {
+        in: [
+          ReportStatus.SUBMITTED,
+          ReportStatus.UNDER_REVIEW,
+          ReportStatus.ASSIGNED,
+          ReportStatus.IN_PROGRESS,
+        ],
+      },
+      latitude: { gte: latitude - delta, lte: latitude + delta },
+      longitude: { gte: longitude - delta, lte: longitude + delta },
+    },
+    include: {
+      category: { select: { id: true, name: true } },
+      _count: { select: { upvotes: true } },
+    },
+    take: 50,
+  });
+  const tokens = new Set(
+    (title ?? "")
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, " ")
+      .split(/\s+/)
+      .filter((x) => x.length > 2),
+  );
+  return rows
+    .map((row) => {
+      const distanceMeters = Math.round(
+          distanceKm(
+            latitude,
+            longitude,
+            Number(row.latitude),
+            Number(row.longitude),
+          ) * 1000,
+        ),
+        titleScore = tokens.size
+          ? [...tokens].filter((token) =>
+              row.title.toLowerCase().includes(token),
+            ).length / tokens.size
+          : 0,
+        recency = Math.max(
+          0,
+          1 - (Date.now() - row.createdAt.getTime()) / (90 * 86400000),
+        );
+      return {
+        ...row,
+        distanceMeters,
+        supportCount: row._count.upvotes,
+        titleScore,
+        similarityScore: +Math.min(
+          1,
+          0.4 +
+            Math.max(0, 1 - distanceMeters / 1000) * 0.35 +
+            titleScore * 0.2 +
+            recency * 0.05,
+        ).toFixed(2),
+      };
+    })
+    .filter((row) => row.distanceMeters <= 1000)
+    .sort((a, b) => b.similarityScore - a.similarityScore)
+    .slice(0, 5)
+    .map(
+      ({
+        _count,
+        titleScore,
+        latitude: _lat,
+        longitude: _lon,
+        citizenId: _citizen,
+        ...row
+      }) => row,
+    );
+}

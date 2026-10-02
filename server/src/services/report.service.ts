@@ -3,7 +3,6 @@ import {
   NotificationType,
   ReportStatus,
   UserRole,
-  type ReportPriority,
 } from "@prisma/client";
 
 import database from "../config/database";

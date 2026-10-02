@@ -1,4 +1,5 @@
 "use client";
+import { useQueryState, useQueryDraft } from "@/hooks/useQueryState";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -20,9 +21,10 @@ const roleLabels: Record<UserRole, string> = { CITIZEN: "Citizen", EMPLOYEE: "Em
 function AdminUsersContent() {
   const router = useRouter(); const { logout } = useAuth();
   const [users, setUsers] = useState<AdminUser[]>([]); const [departments, setDepartments] = useState<Department[]>([]);
-  const [pagination, setPagination] = useState(defaultPagination); const [role, setRole] = useState<UserRole | "">("");
-  const [status, setStatus] = useState(""); const [departmentId, setDepartmentId] = useState("");
-  const [searchInput, setSearchInput] = useState(""); const [search, setSearch] = useState(""); const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState(defaultPagination); const [role, setRole] = useQueryState<UserRole | "">("role", "");
+  const [status, setStatus] = useQueryState<string>("status", ""); const [departmentId, setDepartmentId] = useQueryState<string>("departmentId", "");
+  const [search, setSearch] = useQueryState<string>("search", ""); const [page, setPage] = useQueryState<number>("page", 1);
+  const [searchInput, setSearchInput] = useQueryDraft(search);
   const [isLoading, setIsLoading] = useState(true); const [error, setError] = useState("");
 
   const handleError = useCallback((caught: unknown) => {
@@ -35,7 +37,7 @@ function AdminUsersContent() {
   useEffect(() => { let active = true; void getAdminDepartments().then((value) => { if (active) setDepartments(value.departments); }).catch((caught: unknown) => { if (active) handleError(caught); }); return () => { active = false; }; }, [handleError]);
   useEffect(() => { let active = true; void getAdminUsers(params()).then((value) => { if (!active) return; setUsers(value.users); setPagination(value.pagination); }).catch((caught: unknown) => { if (active) handleError(caught); }).finally(() => { if (active) setIsLoading(false); }); return () => { active = false; }; }, [handleError, params]);
   function filter(update: () => void) { setIsLoading(true); setError(""); setPage(1); update(); }
-  function submitSearch(event: FormEvent) { event.preventDefault(); filter(() => setSearch(searchInput.trim())); }
+  function submitSearch(event: FormEvent) { event.preventDefault(); if (searchInput.trim() === search && page === 1) { void load(); return; } filter(() => setSearch(searchInput.trim())); }
 
   return <main className="mx-auto w-full max-w-7xl flex-1 px-6 py-10 sm:py-14"><div><p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-700">Administration</p><h1 className="mt-2 text-3xl font-bold text-slate-950 sm:text-4xl">Users</h1><p className="mt-3 text-slate-600">Manage citizen and municipality accounts.</p></div>
     <section className="mt-8 grid gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:grid-cols-2 lg:grid-cols-4">

@@ -4,7 +4,7 @@ import app from "./app";
 import { startWasteReminderScheduler } from "./services/waste-reminder.service";
 import { validateJwtConfiguration } from "./utils/jwt";
 
-const port = Number(process.env.PORT) || 5000;
+const port = Number(process.env.PORT) || 5051;
 
 validateJwtConfiguration();
 

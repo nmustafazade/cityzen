@@ -1,25 +1,121 @@
 import { apiRequest } from "./api";
-import type { CityFacility, ExternalTrafficEvent, FacilityCategory, Pagination, ParkingFacility, ParkingReservation, RoadEvent } from "@/types/infrastructure";
+import type {
+  CityFacility,
+  ExternalTrafficEvent,
+  FacilityCategory,
+  Pagination,
+  ParkingFacility,
+  ParkingReservation,
+  RoadEvent,
+} from "@/types/infrastructure";
 
-const query = (params: Record<string, string | number | boolean | undefined>) => { const value = new URLSearchParams(); Object.entries(params).forEach(([key, item]) => { if (item !== undefined && item !== "") value.set(key, String(item)); }); const result = value.toString(); return result ? `?${result}` : ""; };
-export const getRoadEvents = (params: Record<string, string | number | boolean | undefined> = {}) => apiRequest<{ roadEvents: RoadEvent[]; pagination: Pagination }>(`/api/infrastructure/road-events${query(params)}`);
-export const getRoadEvent = (id: number) => apiRequest<{ roadEvent: RoadEvent }>(`/api/infrastructure/road-events/${id}`);
-export const getTraffic = (bounds = { south: 40.30, west: 49.70, north: 40.55, east: 50.05 }) => apiRequest<{ stored: RoadEvent[]; external: ExternalTrafficEvent[]; cachedForSeconds: number }>(`/api/infrastructure/traffic${query(bounds)}`);
-export const getParkingFacilities = (params: Record<string, string | number | boolean | undefined> = {}) => apiRequest<{ parking: ParkingFacility[]; pagination: Pagination }>(`/api/infrastructure/parking${query(params)}`);
-export const getParkingFacility = (id: number) => apiRequest<{ parking: ParkingFacility }>(`/api/infrastructure/parking/${id}`);
-export const getNearbyParking = (latitude: number, longitude: number) => apiRequest<{ parking: (ParkingFacility & { distanceKm: number })[] }>(`/api/infrastructure/parking/nearby${query({ latitude, longitude, radiusKm: 10 })}`);
-export const getFacilities = (params: Record<string, string | number | boolean | undefined> = {}) => apiRequest<{ facilities: CityFacility[]; pagination: Pagination }>(`/api/infrastructure/facilities${query(params)}`);
-export const getFacility = (id: number) => apiRequest<{ facility: CityFacility }>(`/api/infrastructure/facilities/${id}`);
-export const getFacilityCategories = (admin = false) => apiRequest<{ categories: FacilityCategory[] }>(admin ? "/api/admin/facility-categories" : "/api/infrastructure/facility-categories");
-export const createParkingReservation = (parkingFacilityId: number, startsAt: string, endsAt: string) => apiRequest<{ reservation: ParkingReservation }>("/api/parking-reservations", { method: "POST", body: { parkingFacilityId, startsAt, endsAt } });
-export const getMyParkingReservations = (status?: string) => apiRequest<{ reservations: ParkingReservation[]; pagination: Pagination }>(`/api/parking-reservations/my${query({ status })}`);
-export const getParkingReservation = (id: number) => apiRequest<{ reservation: ParkingReservation }>(`/api/parking-reservations/${id}`);
-export const cancelParkingReservation = (id: number) => apiRequest<{ reservation: ParkingReservation }>(`/api/parking-reservations/${id}/cancel`, { method: "PATCH" });
-type ManagedInfrastructureResponse = { roadEvents: RoadEvent[]; parking: ParkingFacility[]; facilities: CityFacility[]; pagination: Pagination };
-export const getManagedRoads = () => apiRequest<ManagedInfrastructureResponse>("/api/municipality/infrastructure/road-events?limit=100");
-export const saveManagedRoad = (data: object, id?: number) => apiRequest<{ roadEvent: RoadEvent }>(`/api/municipality/infrastructure/road-events${id ? `/${id}` : ""}`, { method: id ? "PATCH" : "POST", body: data });
-export const getManagedParking = () => apiRequest<ManagedInfrastructureResponse>("/api/municipality/infrastructure/parking?limit=100");
-export const saveManagedParking = (data: object, id?: number) => apiRequest<{ parking: ParkingFacility }>(`/api/municipality/infrastructure/parking${id ? `/${id}` : ""}`, { method: id ? "PATCH" : "POST", body: data });
-export const getManagedFacilities = () => apiRequest<ManagedInfrastructureResponse>("/api/municipality/infrastructure/facilities?limit=100");
-export const saveManagedFacility = (data: object, id?: number) => apiRequest<{ facility: CityFacility }>(`/api/municipality/infrastructure/facilities${id ? `/${id}` : ""}`, { method: id ? "PATCH" : "POST", body: data });
-export const saveFacilityCategory = (data: object, id?: number) => apiRequest<{ category: FacilityCategory }>(`/api/admin/facility-categories${id ? `/${id}` : ""}`, { method: id ? "PATCH" : "POST", body: data });
+const query = (
+  params: Record<string, string | number | boolean | undefined>,
+) => {
+  const value = new URLSearchParams();
+  Object.entries(params).forEach(([key, item]) => {
+    if (item !== undefined && item !== "") value.set(key, String(item));
+  });
+  const result = value.toString();
+  return result ? `?${result}` : "";
+};
+export const getRoadEvents = (
+  params: Record<string, string | number | boolean | undefined> = {},
+) =>
+  apiRequest<{ roadEvents: RoadEvent[]; pagination: Pagination }>(
+    `/api/infrastructure/road-events${query(params)}`,
+  );
+export const getRoadEvent = (id: number) =>
+  apiRequest<{ roadEvent: RoadEvent }>(`/api/infrastructure/road-events/${id}`);
+export const getTraffic = (
+  bounds = { south: 40.3, west: 49.7, north: 40.55, east: 50.05 },
+) =>
+  apiRequest<{
+    stored: RoadEvent[];
+    external: ExternalTrafficEvent[];
+    cachedForSeconds: number;
+  }>(`/api/infrastructure/traffic${query(bounds)}`);
+export const getParkingFacilities = (
+  params: Record<string, string | number | boolean | undefined> = {},
+) =>
+  apiRequest<{ parking: ParkingFacility[]; pagination: Pagination }>(
+    `/api/infrastructure/parking${query(params)}`,
+  );
+export const getParkingFacility = (id: number) =>
+  apiRequest<{ parking: ParkingFacility }>(`/api/infrastructure/parking/${id}`);
+export const getNearbyParking = (latitude: number, longitude: number) =>
+  apiRequest<{ parking: (ParkingFacility & { distanceKm: number })[] }>(
+    `/api/infrastructure/parking/nearby${query({ latitude, longitude, radiusKm: 10 })}`,
+  );
+export const getFacilities = (
+  params: Record<string, string | number | boolean | undefined> = {},
+) =>
+  apiRequest<{ facilities: CityFacility[]; pagination: Pagination }>(
+    `/api/infrastructure/facilities${query(params)}`,
+  );
+export const getFacility = (id: number) =>
+  apiRequest<{ facility: CityFacility }>(
+    `/api/infrastructure/facilities/${id}`,
+  );
+export const getFacilityCategories = (admin = false) =>
+  apiRequest<{ categories: FacilityCategory[] }>(
+    admin
+      ? "/api/admin/facility-categories"
+      : "/api/infrastructure/facility-categories",
+  );
+export const createParkingReservation = (
+  parkingFacilityId: number,
+  startsAt: string,
+  endsAt: string,
+) =>
+  apiRequest<{ reservation: ParkingReservation }>("/api/parking-reservations", {
+    method: "POST",
+    body: { parkingFacilityId, startsAt, endsAt },
+  });
+export const getMyParkingReservations = (status?: string) =>
+  apiRequest<{ reservations: ParkingReservation[]; pagination: Pagination }>(
+    `/api/parking-reservations/my${query({ status })}`,
+  );
+export const cancelParkingReservation = (id: number) =>
+  apiRequest<{ reservation: ParkingReservation }>(
+    `/api/parking-reservations/${id}/cancel`,
+    { method: "PATCH" },
+  );
+type ManagedInfrastructureResponse = {
+  roadEvents: RoadEvent[];
+  parking: ParkingFacility[];
+  facilities: CityFacility[];
+  pagination: Pagination;
+};
+export const getManagedRoads = () =>
+  apiRequest<ManagedInfrastructureResponse>(
+    "/api/municipality/infrastructure/road-events?limit=100",
+  );
+export const saveManagedRoad = (data: object, id?: number) =>
+  apiRequest<{ roadEvent: RoadEvent }>(
+    `/api/municipality/infrastructure/road-events${id ? `/${id}` : ""}`,
+    { method: id ? "PATCH" : "POST", body: data },
+  );
+export const getManagedParking = () =>
+  apiRequest<ManagedInfrastructureResponse>(
+    "/api/municipality/infrastructure/parking?limit=100",
+  );
+export const saveManagedParking = (data: object, id?: number) =>
+  apiRequest<{ parking: ParkingFacility }>(
+    `/api/municipality/infrastructure/parking${id ? `/${id}` : ""}`,
+    { method: id ? "PATCH" : "POST", body: data },
+  );
+export const getManagedFacilities = () =>
+  apiRequest<ManagedInfrastructureResponse>(
+    "/api/municipality/infrastructure/facilities?limit=100",
+  );
+export const saveManagedFacility = (data: object, id?: number) =>
+  apiRequest<{ facility: CityFacility }>(
+    `/api/municipality/infrastructure/facilities${id ? `/${id}` : ""}`,
+    { method: id ? "PATCH" : "POST", body: data },
+  );
+export const saveFacilityCategory = (data: object, id?: number) =>
+  apiRequest<{ category: FacilityCategory }>(
+    `/api/admin/facility-categories${id ? `/${id}` : ""}`,
+    { method: id ? "PATCH" : "POST", body: data },
+  );

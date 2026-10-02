@@ -1,0 +1,1 @@
+import{ApiListScreen}from"@/components/ApiListScreen";export default function Page(){return <ApiListScreen title="Announcements" subtitle="Important updates from your municipality." path="/api/announcements?limit=20" keyName="announcements"/>}

@@ -1,4 +1,5 @@
 "use client";
+import { useQueryState } from "@/hooks/useQueryState";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -27,9 +28,9 @@ function MyReportsContent() {
   const [reports, setReports] = useState<Report[]>([]);
   const [categories, setCategories] = useState<ReportCategory[]>([]);
   const [pagination, setPagination] = useState(defaultPagination);
-  const [status, setStatus] = useState<ReportStatus | "">("");
-  const [categoryId, setCategoryId] = useState("");
-  const [page, setPage] = useState(1);
+  const [status, setStatus] = useQueryState<ReportStatus | "">("status", "");
+  const [categoryId, setCategoryId] = useQueryState<string>("categoryId", "");
+  const [page, setPage] = useQueryState<number>("page", 1);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
 

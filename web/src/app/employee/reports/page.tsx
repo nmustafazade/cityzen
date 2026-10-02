@@ -1,4 +1,5 @@
 "use client";
+import { useQueryState } from "@/hooks/useQueryState";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -35,11 +36,11 @@ function ReportManagementContent() {
   const [reports, setReports] = useState<Report[]>([]);
   const [categories, setCategories] = useState<ReportCategory[]>([]);
   const [pagination, setPagination] = useState(defaultPagination);
-  const [status, setStatus] = useState<ReportStatus | "">("");
-  const [priority, setPriority] = useState<ReportPriority | "">("");
-  const [categoryId, setCategoryId] = useState("");
-  const [sort, setSort] = useState<SortOption>("newest");
-  const [page, setPage] = useState(1);
+  const [status, setStatus] = useQueryState<ReportStatus | "">("status", "");
+  const [priority, setPriority] = useQueryState<ReportPriority | "">("priority", "");
+  const [categoryId, setCategoryId] = useQueryState<string>("categoryId", "");
+  const [sort, setSort] = useQueryState<SortOption>("sort", "newest");
+  const [page, setPage] = useQueryState<number>("page", 1);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
 

@@ -1,0 +1,40 @@
+{
+  "expo": {
+    "name": "Cityzen",
+    "slug": "cityzen",
+    "scheme": "cityzen",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Cityzen uses your location only when you choose it for maps or a report.",
+        "NSPhotoLibraryUsageDescription": "Choose photos to attach to a city issue.",
+        "NSCameraUsageDescription": "Take a photo to attach to a city issue."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION"]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-font",
+      ["expo-splash-screen", {"backgroundColor": "#0F766E", "image": "./assets/splash-icon.png", "imageWidth": 180}],
+      ["expo-location", {"locationWhenInUsePermission": "Allow Cityzen to use your location when you request it."}],
+      ["expo-image-picker", {"photosPermission": "Choose photos to attach to a report.", "cameraPermission": "Take photos to attach to a report."}]
+    ]
+  }
+}
