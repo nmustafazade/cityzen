@@ -57,3 +57,5 @@ server/uploads/content/*
 !server/uploads/service-requests/
 server/uploads/service-requests/*
 !server/uploads/service-requests/.gitkeep
+
+.prettierignore
