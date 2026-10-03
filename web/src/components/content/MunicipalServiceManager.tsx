@@ -1,2 +1,294 @@
-"use client";import{useCallback,useEffect,useState,type FormEvent}from"react";import{MunicipalityRoute}from"@/components/auth/ProtectedRoute";import{ContentImagePicker}from"./ContentImagePicker";import{Label,ManagementShell,field,panel}from"./ManagementShell";import{useAuth}from"@/context/AuthContext";import{uploadContentImage}from"@/lib/content-images";import{getManagementDepartments}from"@/lib/management";import{createService,getManagedServices,updateService}from"@/lib/services";import{formatDateTime}from"@/lib/format";import type{Department}from"@/types/department";import type{MunicipalService}from"@/types/service";
-const empty={title:"",description:"",instructions:"",requirements:"",contactPhone:"",contactEmail:"",externalUrl:"",address:"",departmentId:""};export function MunicipalServiceManager(){const{user}=useAuth(),[items,setItems]=useState<MunicipalService[]>([]),[deps,setDeps]=useState<Department[]>([]),[editing,setEditing]=useState<MunicipalService|null>(null),[form,setForm]=useState(empty),[photo,setPhoto]=useState<File|null>(null),[pickerKey,setPickerKey]=useState(0),[error,setError]=useState(""),[saving,setSaving]=useState(false);const reset=()=>{setEditing(null);setForm(empty);setPhoto(null);setPickerKey(k=>k+1)};const load=useCallback(()=>getManagedServices({limit:20}).then(r=>setItems(r.services)).catch(()=>setError("Unable to load services.")),[]);useEffect(()=>{void load();if(user?.role==="ADMIN")void getManagementDepartments().then(r=>setDeps(r.departments))},[load,user?.role]);function edit(s:MunicipalService){setEditing(s);setPhoto(null);setPickerKey(k=>k+1);setForm({title:s.title,description:s.description,instructions:s.instructions??"",requirements:s.requirements??"",contactPhone:s.contactPhone??"",contactEmail:s.contactEmail??"",externalUrl:s.externalUrl??"",address:s.address??"",departmentId:String(s.department.id)})}async function submit(e:FormEvent){e.preventDefault();setSaving(true);setError("");const data={title:form.title,description:form.description,instructions:form.instructions||null,requirements:form.requirements||null,contactPhone:form.contactPhone||null,contactEmail:form.contactEmail||null,externalUrl:form.externalUrl||null,address:form.address||null,departmentId:user?.role==="ADMIN"?Number(form.departmentId):undefined};try{const result=editing?await updateService(editing.id,data):await createService(data);if(photo){try{await uploadContentImage("services",result.service.id,photo)}catch{setError("The service was saved, but its photo could not be uploaded.")}}reset();await load()}catch(caught){setError(caught instanceof Error?caught.message:"Unable to save service.")}finally{setSaving(false)}}return <MunicipalityRoute><ManagementShell title="Municipal Services"><p className="mt-3 text-slate-600">Create and maintain public service information.</p>{error&&<p role="alert" className="mt-5 text-red-700">{error}</p>}<div className="mt-8 grid gap-6 lg:grid-cols-[1.4fr_.8fr]"><div className="space-y-4">{items.length?items.map(s=><article key={s.id} className={panel}><div className="flex justify-between gap-4"><div><p className="text-xs font-bold uppercase text-emerald-700">{s.department.name}</p><h2 className="mt-1 font-bold">{s.title}</h2><p className="mt-2 text-sm text-slate-600">{s.isActive?"Active":"Inactive"} · Updated {formatDateTime(s.updatedAt)}</p></div><div className="flex gap-2"><button onClick={()=>edit(s)} className="font-semibold text-emerald-700">Edit</button><button onClick={()=>void updateService(s.id,{isActive:!s.isActive}).then(load)} className="font-semibold text-slate-700">{s.isActive?"Deactivate":"Activate"}</button></div></div></article>):<p className={panel}>No services have been created.</p>}</div><form onSubmit={submit} className={`${panel} h-fit space-y-4`}><h2 className="text-lg font-bold">{editing?"Edit Service":"Create Service"}</h2>{user?.role==="ADMIN"&&<Label text="Department"><select required value={form.departmentId} onChange={e=>setForm({...form,departmentId:e.target.value})} className={field}><option value="">Select department</option>{deps.map(d=><option key={d.id} value={d.id}>{d.name}</option>)}</select></Label>}<Text label="Title" value={form.title} set={v=>setForm({...form,title:v})}/><Area label="Description" value={form.description} set={v=>setForm({...form,description:v})}/><Area label="Instructions" value={form.instructions} set={v=>setForm({...form,instructions:v})}/><Area label="Requirements" value={form.requirements} set={v=>setForm({...form,requirements:v})}/>{(["contactPhone","contactEmail","externalUrl","address"]as const).map(k=><Text key={k} label={k.replace(/([A-Z])/g," $1")} value={form[k]} set={v=>setForm({...form,[k]:v})}/>) }<ContentImagePicker disabled={saving} resetKey={pickerKey} onFileChange={setPhoto}/><button disabled={saving} className="w-full rounded-lg bg-emerald-600 py-2.5 font-semibold text-white">{saving?"Saving...":"Save Service"}</button>{editing&&<button type="button" onClick={reset} className="w-full text-sm font-semibold">Cancel</button>}</form></div></ManagementShell></MunicipalityRoute>};function Text({label,value,set}:{label:string;value:string;set:(v:string)=>void}){return <Label text={label}><input required={label==="Title"} value={value} onChange={e=>set(e.target.value)} className={field}/></Label>}function Area({label,value,set}:{label:string;value:string;set:(v:string)=>void}){return <Label text={label}><textarea required={label==="Description"} rows={3} value={value} onChange={e=>set(e.target.value)} className={field}/></Label>}
+"use client";
+import Link from "next/link";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { MunicipalityRoute } from "@/components/auth/ProtectedRoute";
+import { ContentImagePicker } from "./ContentImagePicker";
+import { Label, ManagementShell, field, panel } from "./ManagementShell";
+import { useAuth } from "@/context/AuthContext";
+import { uploadContentImage } from "@/lib/content-images";
+import { getManagementDepartments } from "@/lib/management";
+import {
+  createService,
+  getManagedServices,
+  updateService,
+} from "@/lib/services";
+import { formatDateTime } from "@/lib/format";
+import type { Department } from "@/types/department";
+import type { MunicipalService } from "@/types/service";
+const empty = {
+  title: "",
+  description: "",
+  instructions: "",
+  requirements: "",
+  contactPhone: "",
+  contactEmail: "",
+  externalUrl: "",
+  address: "",
+  departmentId: "",
+};
+export function MunicipalServiceManager() {
+  const { user } = useAuth(),
+    [items, setItems] = useState<MunicipalService[]>([]),
+    [deps, setDeps] = useState<Department[]>([]),
+    [editing, setEditing] = useState<MunicipalService | null>(null),
+    [form, setForm] = useState(empty),
+    [photo, setPhoto] = useState<File | null>(null),
+    [pickerKey, setPickerKey] = useState(0),
+    [error, setError] = useState(""),
+    [saving, setSaving] = useState(false);
+  const reset = () => {
+    setEditing(null);
+    setForm(empty);
+    setPhoto(null);
+    setPickerKey((k) => k + 1);
+  };
+  const load = useCallback(
+    () =>
+      getManagedServices({ limit: 20 })
+        .then((r) => setItems(r.services))
+        .catch(() => setError("Unable to load services.")),
+    [],
+  );
+  useEffect(() => {
+    void load();
+    if (user?.role === "ADMIN")
+      void getManagementDepartments().then((r) => setDeps(r.departments));
+  }, [load, user?.role]);
+  function edit(s: MunicipalService) {
+    setEditing(s);
+    setPhoto(null);
+    setPickerKey((k) => k + 1);
+    setForm({
+      title: s.title,
+      description: s.description,
+      instructions: s.instructions ?? "",
+      requirements: s.requirements ?? "",
+      contactPhone: s.contactPhone ?? "",
+      contactEmail: s.contactEmail ?? "",
+      externalUrl: s.externalUrl ?? "",
+      address: s.address ?? "",
+      departmentId: String(s.department.id),
+    });
+  }
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    setError("");
+    const data = {
+      title: form.title,
+      description: form.description,
+      instructions: form.instructions || null,
+      requirements: form.requirements || null,
+      contactPhone: form.contactPhone || null,
+      contactEmail: form.contactEmail || null,
+      externalUrl: form.externalUrl || null,
+      address: form.address || null,
+      departmentId:
+        user?.role === "ADMIN" ? Number(form.departmentId) : undefined,
+    };
+    try {
+      const result = editing
+        ? await updateService(editing.id, data)
+        : await createService(data);
+      if (photo) {
+        try {
+          await uploadContentImage("services", result.service.id, photo);
+        } catch {
+          setError(
+            "The service was saved, but its photo could not be uploaded.",
+          );
+        }
+      }
+      reset();
+      await load();
+    } catch (caught) {
+      setError(
+        caught instanceof Error ? caught.message : "Unable to save service.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+  return (
+    <MunicipalityRoute>
+      <ManagementShell title="Municipal Services">
+        <p className="mt-3 text-slate-600">
+          Create and maintain public service information.
+        </p>
+        {error && (
+          <p role="alert" className="mt-5 text-red-700">
+            {error}
+          </p>
+        )}
+        <div className="mt-8 grid gap-6 lg:grid-cols-[1.4fr_.8fr]">
+          <div className="space-y-4">
+            {items.length ? (
+              items.map((s) => (
+                <article key={s.id} className={panel}>
+                  <div className="flex flex-col justify-between gap-4 xl:flex-row xl:items-center">
+                    <div>
+                      <p className="text-xs font-bold uppercase text-emerald-700">
+                        {s.department.name}
+                      </p>
+                      <h2 className="mt-1 font-bold">{s.title}</h2>
+                      <p className="mt-2 text-sm text-slate-600">
+                        {s.isActive ? "Active" : "Inactive"} · Updated{" "}
+                        {formatDateTime(s.updatedAt)}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 flex-wrap items-center gap-3">
+                      <Link
+                        href={`/municipality/services/${s.id}/appointments`}
+                        className="whitespace-nowrap font-semibold text-emerald-700"
+                      >
+                        Appointment Slots
+                      </Link>
+                      <button
+                        onClick={() => edit(s)}
+                        className="font-semibold text-emerald-700"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() =>
+                          void updateService(s.id, {
+                            isActive: !s.isActive,
+                          }).then(load)
+                        }
+                        className="font-semibold text-slate-700"
+                      >
+                        {s.isActive ? "Deactivate" : "Activate"}
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              ))
+            ) : (
+              <p className={panel}>No services have been created.</p>
+            )}
+          </div>
+          <form onSubmit={submit} className={`${panel} h-fit space-y-4`}>
+            <h2 className="text-lg font-bold">
+              {editing ? "Edit Service" : "Create Service"}
+            </h2>
+            {user?.role === "ADMIN" && (
+              <Label text="Department">
+                <select
+                  required
+                  value={form.departmentId}
+                  onChange={(e) =>
+                    setForm({ ...form, departmentId: e.target.value })
+                  }
+                  className={field}
+                >
+                  <option value="">Select department</option>
+                  {deps.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name}
+                    </option>
+                  ))}
+                </select>
+              </Label>
+            )}
+            <Text
+              label="Title"
+              value={form.title}
+              set={(v) => setForm({ ...form, title: v })}
+            />
+            <Area
+              label="Description"
+              value={form.description}
+              set={(v) => setForm({ ...form, description: v })}
+            />
+            <Area
+              label="Instructions"
+              value={form.instructions}
+              set={(v) => setForm({ ...form, instructions: v })}
+            />
+            <Area
+              label="Requirements"
+              value={form.requirements}
+              set={(v) => setForm({ ...form, requirements: v })}
+            />
+            {(
+              [
+                "contactPhone",
+                "contactEmail",
+                "externalUrl",
+                "address",
+              ] as const
+            ).map((k) => (
+              <Text
+                key={k}
+                label={k.replace(/([A-Z])/g, " $1")}
+                value={form[k]}
+                set={(v) => setForm({ ...form, [k]: v })}
+              />
+            ))}
+            <ContentImagePicker
+              disabled={saving}
+              resetKey={pickerKey}
+              onFileChange={setPhoto}
+            />
+            <button
+              disabled={saving}
+              className="w-full rounded-lg bg-emerald-600 py-2.5 font-semibold text-white"
+            >
+              {saving ? "Saving..." : "Save Service"}
+            </button>
+            {editing && (
+              <button
+                type="button"
+                onClick={reset}
+                className="w-full text-sm font-semibold"
+              >
+                Cancel
+              </button>
+            )}
+          </form>
+        </div>
+      </ManagementShell>
+    </MunicipalityRoute>
+  );
+}
+function Text({
+  label,
+  value,
+  set,
+}: {
+  label: string;
+  value: string;
+  set: (v: string) => void;
+}) {
+  return (
+    <Label text={label}>
+      <input
+        required={label === "Title"}
+        value={value}
+        onChange={(e) => set(e.target.value)}
+        className={field}
+      />
+    </Label>
+  );
+}
+function Area({
+  label,
+  value,
+  set,
+}: {
+  label: string;
+  value: string;
+  set: (v: string) => void;
+}) {
+  return (
+    <Label text={label}>
+      <textarea
+        required={label === "Description"}
+        rows={3}
+        value={value}
+        onChange={(e) => set(e.target.value)}
+        className={field}
+      />
+    </Label>
+  );
+}

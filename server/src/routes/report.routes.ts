@@ -9,7 +9,9 @@ import {
   create,
   index,
   myReports,
-  similar,visibility,moderation,
+  similar,
+  visibility,
+  moderation,
 } from "../controllers/report.controller";
 import { uploadImages } from "../controllers/report-image.controller";
 import {
@@ -30,21 +32,37 @@ reportRouter.use(authenticate);
 
 reportRouter.post("/", authorizeRoles(UserRole.CITIZEN), create);
 reportRouter.get("/my", authorizeRoles(UserRole.CITIZEN), myReports);
-reportRouter.get("/similar",authorizeRoles(UserRole.CITIZEN),similar);
+reportRouter.get("/similar", authorizeRoles(UserRole.CITIZEN), similar);
 reportRouter.get(
   "/",
   authorizeRoles(UserRole.EMPLOYEE, UserRole.DEPARTMENT_HEAD, UserRole.ADMIN),
   index,
 );
 reportRouter.get("/:id", byId);
-reportRouter.patch("/:id/visibility",authorizeRoles(UserRole.CITIZEN,UserRole.ADMIN),visibility);
-reportRouter.patch("/:id/public-moderation",authorizeRoles(UserRole.ADMIN),moderation);
+reportRouter.patch(
+  "/:id/visibility",
+  authorizeRoles(UserRole.CITIZEN, UserRole.ADMIN),
+  visibility,
+);
+reportRouter.patch(
+  "/:id/public-moderation",
+  authorizeRoles(UserRole.ADMIN),
+  moderation,
+);
 reportRouter.get("/:id/comments", comments);
 reportRouter.post("/:id/comments", createComment);
 reportRouter.delete("/:reportId/comments/:commentId", deleteComment);
-reportRouter.post("/:id/upvote", authorizeRoles(UserRole.CITIZEN), toggleUpvote);
+reportRouter.post(
+  "/:id/upvote",
+  authorizeRoles(UserRole.CITIZEN),
+  toggleUpvote,
+);
 reportRouter.get("/:id/feedback", feedback);
-reportRouter.put("/:id/feedback", authorizeRoles(UserRole.CITIZEN), saveFeedback);
+reportRouter.put(
+  "/:id/feedback",
+  authorizeRoles(UserRole.CITIZEN),
+  saveFeedback,
+);
 reportRouter.post(
   "/:id/images",
   authorizeRoles(UserRole.CITIZEN),

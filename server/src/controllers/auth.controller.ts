@@ -30,7 +30,10 @@ function validateRegisterBody(body: unknown): RegisterInput {
     !emailPattern.test(email.trim()) ||
     typeof password !== "string"
   ) {
-    throw new AppError(400, "Valid firstName, lastName, email, and password are required");
+    throw new AppError(
+      400,
+      "Valid firstName, lastName, email, and password are required",
+    );
   }
 
   if (!passwordPattern.test(password)) {

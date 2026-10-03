@@ -99,8 +99,15 @@ export async function getAdminUser(id: number) {
   return user;
 }
 
-export async function updateUserRole(id: number, currentAdminId: number, role: UserRole) {
-  const user = await database.user.findUnique({ where: { id }, select: { id: true, role: true } });
+export async function updateUserRole(
+  id: number,
+  currentAdminId: number,
+  role: UserRole,
+) {
+  const user = await database.user.findUnique({
+    where: { id },
+    select: { id: true, role: true },
+  });
   if (!user) throw new AppError(404, "User not found");
   if (id === currentAdminId && role !== UserRole.ADMIN) {
     throw new AppError(400, "You cannot remove your own administrator role");
@@ -114,40 +121,65 @@ export async function updateUserRole(id: number, currentAdminId: number, role: U
     }
     return transaction.user.update({
       where: { id },
-      data: { role, departmentId: role === UserRole.CITIZEN ? null : undefined },
+      data: {
+        role,
+        departmentId: role === UserRole.CITIZEN ? null : undefined,
+      },
       select: safeUserSelect,
     });
   });
 }
 
-export async function updateUserActiveStatus(id: number, currentAdminId: number, isActive: boolean) {
-  const user = await database.user.findUnique({ where: { id }, select: { id: true } });
+export async function updateUserActiveStatus(
+  id: number,
+  currentAdminId: number,
+  isActive: boolean,
+) {
+  const user = await database.user.findUnique({
+    where: { id },
+    select: { id: true },
+  });
   if (!user) throw new AppError(404, "User not found");
   if (id === currentAdminId && !isActive) {
     throw new AppError(400, "You cannot deactivate your own account");
   }
-  return database.user.update({ where: { id }, data: { isActive }, select: safeUserSelect });
+  return database.user.update({
+    where: { id },
+    data: { isActive },
+    select: safeUserSelect,
+  });
 }
 
-export async function updateUserDepartment(id: number, departmentId: number | null) {
-  const user = await database.user.findUnique({ where: { id }, select: { id: true, role: true } });
+export async function updateUserDepartment(
+  id: number,
+  departmentId: number | null,
+) {
+  const user = await database.user.findUnique({
+    where: { id },
+    select: { id: true, role: true },
+  });
   if (!user) throw new AppError(404, "User not found");
   if (user.role === UserRole.CITIZEN) {
-    throw new AppError(400, "Citizens cannot belong to a municipality department");
+    throw new AppError(
+      400,
+      "Citizens cannot belong to a municipality department",
+    );
   }
   if (departmentId !== null) {
     const department = await database.department.findFirst({
       where: { id: departmentId, isActive: true },
       select: { id: true },
     });
-    if (!department) throw new AppError(400, "Department does not exist or is inactive");
+    if (!department)
+      throw new AppError(400, "Department does not exist or is inactive");
   }
   return database.$transaction(async (transaction) => {
     if (user.role === UserRole.EMPLOYEE) {
       await transaction.report.updateMany({
         where: {
           assignedEmployeeId: id,
-          departmentId: departmentId === null ? undefined : { not: departmentId },
+          departmentId:
+            departmentId === null ? undefined : { not: departmentId },
         },
         data: { assignedEmployeeId: null },
       });

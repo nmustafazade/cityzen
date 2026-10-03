@@ -121,33 +121,59 @@ export default function CityMapPage() {
     [locating, setLocating] = useState(false),
     [query, setQuery] = useState(""),
     [error, setError] = useState("");
-  const [loadingLayers, setLoadingLayers] = useState<Layer[]>(layerInfo.map(l => l.key));
+  const [loadingLayers, setLoadingLayers] = useState<Layer[]>(
+    layerInfo.map((l) => l.key),
+  );
   const [failedLayers, setFailedLayers] = useState<Layer[]>([]);
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     let active = true;
-    async function load<T>(key: Layer, request: Promise<T>, save: (data: T) => void) {
+    async function load<T>(
+      key: Layer,
+      request: Promise<T>,
+      save: (data: T) => void,
+    ) {
       let timer: ReturnType<typeof setTimeout> | undefined;
       try {
-        const data = await Promise.race([request, new Promise<never>((_, reject) => {
-          timer = setTimeout(() => reject(new Error("Timed out")), 15000);
-        })]);
+        const data = await Promise.race([
+          request,
+          new Promise<never>((_, reject) => {
+            timer = setTimeout(() => reject(new Error("Timed out")), 15000);
+          }),
+        ]);
         if (active) save(data);
       } catch {
-        if (active) setFailedLayers(previous => [...previous, key]);
+        if (active) setFailedLayers((previous) => [...previous, key]);
       } finally {
         clearTimeout(timer);
-        if (active) setLoadingLayers(previous => previous.filter(layer => layer !== key));
+        if (active)
+          setLoadingLayers((previous) =>
+            previous.filter((layer) => layer !== key),
+          );
       }
     }
-    void load("roads", getTraffic(), r => setRoads([...r.stored, ...r.external]));
-    void load("parking", getParkingFacilities({ limit: 100 }), r => setParking(r.parking));
-    void load("facilities", getFacilities({ limit: 100 }), r => setFacilities(r.facilities));
-    void load("waste", getWasteFacilities({ limit: 100 }), r => setWaste(r.facilities));
-    void load("environment", getEnvironmentalStations(), r => setStations(r.stations));
-    void load("issues", getPublicReports({ limit: 100 }), r => setIssues(r.reports));
-    void load("alerts", getAlerts(), r => setAlerts(r.alerts));
-    return () => { active = false; };
+    void load("roads", getTraffic(), (r) =>
+      setRoads([...r.stored, ...r.external]),
+    );
+    void load("parking", getParkingFacilities({ limit: 100 }), (r) =>
+      setParking(r.parking),
+    );
+    void load("facilities", getFacilities({ limit: 100 }), (r) =>
+      setFacilities(r.facilities),
+    );
+    void load("waste", getWasteFacilities({ limit: 100 }), (r) =>
+      setWaste(r.facilities),
+    );
+    void load("environment", getEnvironmentalStations(), (r) =>
+      setStations(r.stations),
+    );
+    void load("issues", getPublicReports({ limit: 100 }), (r) =>
+      setIssues(r.reports),
+    );
+    void load("alerts", getAlerts(), (r) => setAlerts(r.alerts));
+    return () => {
+      active = false;
+    };
   }, [attempt]);
   const markers = useMemo<InfrastructureMarker[]>(
     () =>
@@ -238,9 +264,13 @@ export default function CityMapPage() {
           : []),
       ].filter(
         (x) =>
-          Number.isFinite(x.latitude) && Math.abs(x.latitude) <= 90 &&
-          Number.isFinite(x.longitude) && Math.abs(x.longitude) <= 180 &&
-          `${x.title} ${x.detail}`.toLowerCase().includes(query.trim().toLowerCase()),
+          Number.isFinite(x.latitude) &&
+          Math.abs(x.latitude) <= 90 &&
+          Number.isFinite(x.longitude) &&
+          Math.abs(x.longitude) <= 180 &&
+          `${x.title} ${x.detail}`
+            .toLowerCase()
+            .includes(query.trim().toLowerCase()),
       ),
     [
       roads,
@@ -281,7 +311,8 @@ export default function CityMapPage() {
             City Map
           </h1>
           <p className="mt-2 text-sm leading-6 text-slate-600">
-            Explore city information. Switch layers on or off to show or hide Cityzen markers.
+            Explore city information. Switch layers on or off to show or hide
+            Cityzen markers.
           </p>
           <label className="relative mt-6 block">
             <Search
@@ -297,8 +328,19 @@ export default function CityMapPage() {
               className="w-full py-2.5 pl-10 pr-3 text-sm"
             />
           </label>
-          <p id="map-search-help" className="mt-2 text-xs text-slate-500">Search loaded places and events by name or category in enabled layers. This is not a street/address search. Base-map labels always remain visible.</p>
-          {query && <button className="mt-2 text-sm underline" onClick={() => setQuery("")}>Clear search</button>}
+          <p id="map-search-help" className="mt-2 text-xs text-slate-500">
+            Search loaded places and events by name or category in enabled
+            layers. This is not a street/address search. Base-map labels always
+            remain visible.
+          </p>
+          {query && (
+            <button
+              className="mt-2 text-sm underline"
+              onClick={() => setQuery("")}
+            >
+              Clear search
+            </button>
+          )}
           <div className="mt-7">
             <p className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">
               Map layers
@@ -316,7 +358,16 @@ export default function CityMapPage() {
                   >
                     <Icon size={17} />
                   </span>
-                  <span>{label}{loadingLayers.includes(key) ? <small className="block font-normal">Loading…</small> : failedLayers.includes(key) ? <small className="block font-normal text-rose-700">Unavailable</small> : null}</span>
+                  <span>
+                    {label}
+                    {loadingLayers.includes(key) ? (
+                      <small className="block font-normal">Loading…</small>
+                    ) : failedLayers.includes(key) ? (
+                      <small className="block font-normal text-rose-700">
+                        Unavailable
+                      </small>
+                    ) : null}
+                  </span>
                   <span
                     className={`ml-auto grid size-5 place-items-center rounded-md border ${layers[key] ? "border-teal-600 bg-teal-600 text-white" : "border-slate-300"}`}
                   >
@@ -334,7 +385,22 @@ export default function CityMapPage() {
             <LocateFixed size={17} />
             {locating ? "Finding location..." : "Use my location"}
           </button>
-          {failedLayers.length > 0 && <div role="alert" className="mt-4 text-sm text-rose-700">Some layers could not load. Check the backend connection.<button className="ml-2 underline" disabled={loadingLayers.length > 0} onClick={() => { setFailedLayers([]); setLoadingLayers(layerInfo.map(l => l.key)); setAttempt(v => v + 1); }}>Retry layers</button></div>}
+          {failedLayers.length > 0 && (
+            <div role="alert" className="mt-4 text-sm text-rose-700">
+              Some layers could not load. Check the backend connection.
+              <button
+                className="ml-2 underline"
+                disabled={loadingLayers.length > 0}
+                onClick={() => {
+                  setFailedLayers([]);
+                  setLoadingLayers(layerInfo.map((l) => l.key));
+                  setAttempt((v) => v + 1);
+                }}
+              >
+                Retry layers
+              </button>
+            </div>
+          )}
           {error && (
             <p
               role="alert"
@@ -352,7 +418,17 @@ export default function CityMapPage() {
             </span>
           </div>
           <div className="mt-3 space-y-2">
-            {!markers.length && <p className="text-sm text-slate-500">{loadingLayers.length ? "Loading map data…" : !Object.values(layers).some(Boolean) ? "All layers are off. Enable a layer to see markers." : query.trim() ? "No matching markers. Try another search or enable more layers." : "No locations in the enabled layers."}</p>}
+            {!markers.length && (
+              <p className="text-sm text-slate-500">
+                {loadingLayers.length
+                  ? "Loading map data…"
+                  : !Object.values(layers).some(Boolean)
+                    ? "All layers are off. Enable a layer to see markers."
+                    : query.trim()
+                      ? "No matching markers. Try another search or enable more layers."
+                      : "No locations in the enabled layers."}
+              </p>
+            )}
             {markers.slice(0, 8).map((item) => (
               <Link
                 key={item.id}

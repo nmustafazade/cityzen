@@ -1,3 +1,56 @@
 "use client";
-import Link from "next/link";import{useEffect,useState}from"react";import{MunicipalityRoute}from"@/components/auth/ProtectedRoute";import{getManagedServices}from"@/lib/services";import type{MunicipalService}from"@/types/service";
-export default function Page(){const[services,setServices]=useState<MunicipalService[]>([]),[error,setError]=useState("");useEffect(()=>{void getManagedServices({limit:100}).then(r=>setServices(r.services)).catch((e:Error)=>setError(e.message))},[]);return <MunicipalityRoute><main className="mx-auto max-w-5xl px-6 py-12"><Link href="/municipality/services" className="font-semibold text-emerald-700">← Municipal Services</Link><h1 className="mt-5 text-3xl font-bold">Advanced Service Configuration</h1><p className="mt-2 text-slate-600">Configure custom questions, document requirements, and appointment slots.</p>{error&&<p role="alert" className="mt-5 text-red-700">{error}</p>}<div className="mt-7 grid gap-4 sm:grid-cols-2">{services.map(service=><Link key={service.id} href={`/municipality/services/${service.id}/configuration`} className="rounded-2xl border bg-white p-5 shadow-sm"><span className="text-xs font-bold uppercase text-emerald-700">{service.department.name}</span><h2 className="mt-1 font-bold">{service.title}</h2><p className="mt-3 text-sm text-slate-500">{service.fields?.length??0} custom fields · Configure →</p></Link>)}</div></main></MunicipalityRoute>}
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { MunicipalityRoute } from "@/components/auth/ProtectedRoute";
+import { getManagedServices } from "@/lib/services";
+import type { MunicipalService } from "@/types/service";
+export default function Page() {
+  const [services, setServices] = useState<MunicipalService[]>([]),
+    [error, setError] = useState("");
+  useEffect(() => {
+    void getManagedServices({ limit: 100 })
+      .then((r) => setServices(r.services))
+      .catch((e: Error) => setError(e.message));
+  }, []);
+  return (
+    <MunicipalityRoute>
+      <main className="mx-auto max-w-5xl px-6 py-12">
+        <Link
+          href="/municipality/services"
+          className="font-semibold text-emerald-700"
+        >
+          ← Municipal Services
+        </Link>
+        <h1 className="mt-5 text-3xl font-bold">
+          Advanced Service Configuration
+        </h1>
+        <p className="mt-2 text-slate-600">
+          Configure custom questions, document requirements, and appointment
+          slots.
+        </p>
+        {error && (
+          <p role="alert" className="mt-5 text-red-700">
+            {error}
+          </p>
+        )}
+        <div className="mt-7 grid gap-4 sm:grid-cols-2">
+          {services.map((service) => (
+            <Link
+              key={service.id}
+              href={`/municipality/services/${service.id}/configuration`}
+              className="rounded-2xl border bg-white p-5 shadow-sm"
+            >
+              <span className="text-xs font-bold uppercase text-emerald-700">
+                {service.department.name}
+              </span>
+              <h2 className="mt-1 font-bold">{service.title}</h2>
+              <p className="mt-3 text-sm text-slate-500">
+                {service.fields?.length ?? 0} custom fields · Configure →
+              </p>
+            </Link>
+          ))}
+        </div>
+      </main>
+    </MunicipalityRoute>
+  );
+}

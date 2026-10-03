@@ -1,7 +1,12 @@
 import { UserRole } from "@prisma/client";
 import { Router } from "express";
 
-import { cancel, create, detail, mine } from "../controllers/parking-reservation.controller";
+import {
+  cancel,
+  create,
+  detail,
+  mine,
+} from "../controllers/parking-reservation.controller";
 import { authenticate } from "../middleware/auth.middleware";
 import { authorizeRoles } from "../middleware/role.middleware";
 

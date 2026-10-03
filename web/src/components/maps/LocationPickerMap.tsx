@@ -2,22 +2,41 @@
 
 import { useEffect } from "react";
 import type { Marker as LeafletMarker } from "leaflet";
-import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from "react-leaflet";
+import {
+  MapContainer,
+  Marker,
+  TileLayer,
+  useMap,
+  useMapEvents,
+} from "react-leaflet";
 
 import { reportMarkerIcon } from "@/components/maps/leaflet-icon";
 import { FALLBACK_MAP_CENTER } from "@/lib/location";
 import type { Coordinates } from "@/types/location";
 
-function MapClickHandler({ onChange, disabled }: { onChange: (coordinates: Coordinates) => void; disabled: boolean }) {
+function MapClickHandler({
+  onChange,
+  disabled,
+}: {
+  onChange: (coordinates: Coordinates) => void;
+  disabled: boolean;
+}) {
   useMapEvents({
     click(event) {
-      if (!disabled) onChange({ latitude: event.latlng.lat, longitude: event.latlng.lng });
+      if (!disabled)
+        onChange({ latitude: event.latlng.lat, longitude: event.latlng.lng });
     },
   });
   return null;
 }
 
-function MapViewController({ coordinates, focusVersion }: { coordinates: Coordinates | null; focusVersion: number }) {
+function MapViewController({
+  coordinates,
+  focusVersion,
+}: {
+  coordinates: Coordinates | null;
+  focusVersion: number;
+}) {
   const map = useMap();
   const latitude = coordinates?.latitude;
   const longitude = coordinates?.longitude;
@@ -57,7 +76,10 @@ export default function LocationPickerMap({
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       <MapClickHandler onChange={onChange} disabled={disabled} />
-      <MapViewController coordinates={coordinates} focusVersion={focusVersion} />
+      <MapViewController
+        coordinates={coordinates}
+        focusVersion={focusVersion}
+      />
       {coordinates && (
         <Marker
           position={[coordinates.latitude, coordinates.longitude]}
@@ -67,7 +89,8 @@ export default function LocationPickerMap({
             dragend(event) {
               const marker = event.target as LeafletMarker;
               const position = marker.getLatLng();
-              if (!disabled) onChange({ latitude: position.lat, longitude: position.lng });
+              if (!disabled)
+                onChange({ latitude: position.lat, longitude: position.lng });
             },
           }}
         />

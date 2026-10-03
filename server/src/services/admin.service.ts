@@ -29,7 +29,8 @@ async function ensureUniqueCategoryName(name: string, excludeId?: number) {
     where: { name, id: excludeId ? { not: excludeId } : undefined },
     select: { id: true },
   });
-  if (existing) throw new AppError(409, "A report category with this name already exists");
+  if (existing)
+    throw new AppError(409, "A report category with this name already exists");
 }
 
 export async function createCategory(input: CategoryInput) {
@@ -48,7 +49,10 @@ export async function createCategory(input: CategoryInput) {
 }
 
 export async function updateCategory(id: number, input: CategoryUpdate) {
-  const current = await database.reportCategory.findUnique({ where: { id }, select: { id: true } });
+  const current = await database.reportCategory.findUnique({
+    where: { id },
+    select: { id: true },
+  });
   if (!current) throw new AppError(404, "Report category not found");
   const name = input.name?.trim();
   if (name) await ensureUniqueCategoryName(name, id);
@@ -59,7 +63,10 @@ export async function updateCategory(id: number, input: CategoryUpdate) {
     where: { id },
     data: {
       name,
-      description: input.description === undefined ? undefined : input.description?.trim() || null,
+      description:
+        input.description === undefined
+          ? undefined
+          : input.description?.trim() || null,
       icon: input.icon === undefined ? undefined : input.icon?.trim() || null,
       isActive: input.isActive,
       departmentId: input.departmentId,
@@ -73,7 +80,8 @@ async function ensureActiveDepartment(departmentId: number) {
     where: { id: departmentId, isActive: true },
     select: { id: true },
   });
-  if (!department) throw new AppError(400, "Department does not exist or is inactive");
+  if (!department)
+    throw new AppError(400, "Department does not exist or is inactive");
 }
 
 export async function getAdminStats() {

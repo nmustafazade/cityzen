@@ -1,3 +1,145 @@
-"use client";import{useCallback,useEffect,useState}from"react";import{MunicipalityRoute}from"@/components/auth/ProtectedRoute";import{InfrastructureShell,StateMessage}from"@/components/infrastructure/InfrastructureShell";import{getManagedWasteZones,saveWasteSchedule}from"@/lib/waste";import type{WasteSchedule,WasteZone}from"@/types/waste";import{wasteLabels}from"@/types/waste";
-function Content(){const[zones,setZones]=useState<Array<WasteZone&{schedules:WasteSchedule[]}>>([]),[zoneId,setZoneId]=useState(""),[wasteType,setWasteType]=useState("GENERAL"),[day,setDay]=useState("MONDAY"),[time,setTime]=useState(""),[error,setError]=useState("");const load=useCallback(()=>getManagedWasteZones().then(r=>setZones(r.zones)).catch((e:Error)=>setError(e.message)),[]);useEffect(()=>{void load()},[load]);const submit=async(e:React.FormEvent)=>{e.preventDefault();try{await saveWasteSchedule({zoneId:Number(zoneId),wasteType,dayOfWeek:day,collectionTime:time||undefined});load()}catch(x){setError(x instanceof Error?x.message:"Unable to save")}};return <InfrastructureShell title="Collection Schedules" subtitle="Configure weekly waste collection by zone."><form onSubmit={submit} className="mt-8 grid gap-4 rounded-2xl border bg-white p-6 sm:grid-cols-4"><Select value={zoneId} set={setZoneId} label="Zone" options={zones.map(z=>[String(z.id),z.name])}/><Select value={wasteType} set={setWasteType} label="Waste type" options={Object.entries(wasteLabels)}/><Select value={day} set={setDay} label="Weekday" options={["MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY","SATURDAY","SUNDAY"].map(x=>[x,x])}/><label className="text-sm font-semibold">Time<input type="time" value={time} onChange={e=>setTime(e.target.value)} className="mt-1 w-full rounded-lg border px-3 py-2"/></label><button className="rounded-lg bg-emerald-600 px-4 py-2 font-semibold text-white sm:col-span-4">Add Schedule</button></form>{error&&<StateMessage>{error}</StateMessage>}<div className="mt-8 space-y-4">{zones.map(zone=><section key={zone.id} className="rounded-2xl border bg-white p-5"><h2 className="font-bold">{zone.name}</h2>{zone.schedules.map(row=><p key={row.id} className="mt-2 text-sm">{row.dayOfWeek} · {wasteLabels[row.wasteType]} {row.collectionTime||""}</p>)}</section>)}</div></InfrastructureShell>}
-function Select({value,set,label,options}:{value:string;set:(v:string)=>void;label:string;options:string[][]}){return <label className="text-sm font-semibold">{label}<select required value={value} onChange={e=>set(e.target.value)} className="mt-1 w-full rounded-lg border px-3 py-2"><option value="">Select</option>{options.map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></label>}export default function Page(){return <MunicipalityRoute><Content/></MunicipalityRoute>}
+"use client";
+import { useCallback, useEffect, useState } from "react";
+import { MunicipalityRoute } from "@/components/auth/ProtectedRoute";
+import {
+  InfrastructureShell,
+  StateMessage,
+} from "@/components/infrastructure/InfrastructureShell";
+import { getManagedWasteZones, saveWasteSchedule } from "@/lib/waste";
+import type { WasteSchedule, WasteZone } from "@/types/waste";
+import { wasteLabels } from "@/types/waste";
+function Content() {
+  const [zones, setZones] = useState<
+      Array<WasteZone & { schedules: WasteSchedule[] }>
+    >([]),
+    [zoneId, setZoneId] = useState(""),
+    [wasteType, setWasteType] = useState("GENERAL"),
+    [day, setDay] = useState("MONDAY"),
+    [time, setTime] = useState(""),
+    [error, setError] = useState("");
+  const load = useCallback(
+    () =>
+      getManagedWasteZones()
+        .then((r) => setZones(r.zones))
+        .catch((e: Error) => setError(e.message)),
+    [],
+  );
+  useEffect(() => {
+    void load();
+  }, [load]);
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await saveWasteSchedule({
+        zoneId: Number(zoneId),
+        wasteType,
+        dayOfWeek: day,
+        collectionTime: time || undefined,
+      });
+      load();
+    } catch (x) {
+      setError(x instanceof Error ? x.message : "Unable to save");
+    }
+  };
+  return (
+    <InfrastructureShell
+      title="Collection Schedules"
+      subtitle="Configure weekly waste collection by zone."
+    >
+      <form
+        onSubmit={submit}
+        className="mt-8 grid gap-4 rounded-2xl border bg-white p-6 sm:grid-cols-4"
+      >
+        <Select
+          value={zoneId}
+          set={setZoneId}
+          label="Zone"
+          options={zones.map((z) => [String(z.id), z.name])}
+        />
+        <Select
+          value={wasteType}
+          set={setWasteType}
+          label="Waste type"
+          options={Object.entries(wasteLabels)}
+        />
+        <Select
+          value={day}
+          set={setDay}
+          label="Weekday"
+          options={[
+            "MONDAY",
+            "TUESDAY",
+            "WEDNESDAY",
+            "THURSDAY",
+            "FRIDAY",
+            "SATURDAY",
+            "SUNDAY",
+          ].map((x) => [x, x])}
+        />
+        <label className="text-sm font-semibold">
+          Time
+          <input
+            type="time"
+            value={time}
+            onChange={(e) => setTime(e.target.value)}
+            className="mt-1 w-full rounded-lg border px-3 py-2"
+          />
+        </label>
+        <button className="rounded-lg bg-emerald-600 px-4 py-2 font-semibold text-white sm:col-span-4">
+          Add Schedule
+        </button>
+      </form>
+      {error && <StateMessage>{error}</StateMessage>}
+      <div className="mt-8 space-y-4">
+        {zones.map((zone) => (
+          <section key={zone.id} className="rounded-2xl border bg-white p-5">
+            <h2 className="font-bold">{zone.name}</h2>
+            {zone.schedules.map((row) => (
+              <p key={row.id} className="mt-2 text-sm">
+                {row.dayOfWeek} · {wasteLabels[row.wasteType]}{" "}
+                {row.collectionTime || ""}
+              </p>
+            ))}
+          </section>
+        ))}
+      </div>
+    </InfrastructureShell>
+  );
+}
+function Select({
+  value,
+  set,
+  label,
+  options,
+}: {
+  value: string;
+  set: (v: string) => void;
+  label: string;
+  options: string[][];
+}) {
+  return (
+    <label className="text-sm font-semibold">
+      {label}
+      <select
+        required
+        value={value}
+        onChange={(e) => set(e.target.value)}
+        className="mt-1 w-full rounded-lg border px-3 py-2"
+      >
+        <option value="">Select</option>
+        {options.map(([v, l]) => (
+          <option key={v} value={v}>
+            {l}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+export default function Page() {
+  return (
+    <MunicipalityRoute>
+      <Content />
+    </MunicipalityRoute>
+  );
+}

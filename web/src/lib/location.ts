@@ -10,8 +10,10 @@ export function coordinatesFromValues(
   latitude: string | number | null | undefined,
   longitude: string | number | null | undefined,
 ): Coordinates | null {
-  if (latitude === null || latitude === undefined || latitude === "") return null;
-  if (longitude === null || longitude === undefined || longitude === "") return null;
+  if (latitude === null || latitude === undefined || latitude === "")
+    return null;
+  if (longitude === null || longitude === undefined || longitude === "")
+    return null;
 
   const parsedLatitude = Number(latitude);
   const parsedLongitude = Number(longitude);
@@ -38,6 +40,7 @@ export function geolocationErrorMessage(code: number): string {
     return "Location permission was denied. You can select the location manually on the map.";
   }
   if (code === 2) return "Your browser could not determine your location.";
-  if (code === 3) return "Finding your location took too long. Please try again or select it manually.";
+  if (code === 3)
+    return "Finding your location took too long. Please try again or select it manually.";
   return "Your location could not be retrieved. You can select it manually on the map.";
 }

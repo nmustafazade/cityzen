@@ -1,1 +1,11 @@
-import{ApiListScreen}from"@/components/ApiListScreen";export default function Page(){return <ApiListScreen title="Waste & Recycling" subtitle="Collection and nearby recycling information." path="/api/waste/facilities?limit=30" keyName="facilities"/>}
+import { ApiListScreen } from "@/components/ApiListScreen";
+export default function Page() {
+  return (
+    <ApiListScreen
+      title="Waste & Recycling"
+      subtitle="Collection and nearby recycling information."
+      path="/api/waste/facilities?limit=30"
+      keyName="facilities"
+    />
+  );
+}

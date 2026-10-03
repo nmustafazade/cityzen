@@ -1,27 +1,272 @@
 import { ServiceRequestStatus } from "@prisma/client";
 import type { NextFunction, Request, Response } from "express";
-import { assignServiceRequest, cancelServiceRequest, createServiceRequest, getServiceRequest, listManagedServiceRequests, listMyServiceRequests, updateServiceRequestStatus } from "../services/service-request.service";
+import {
+  assignServiceRequest,
+  cancelServiceRequest,
+  createServiceRequest,
+  getServiceRequest,
+  listManagedServiceRequests,
+  listMyServiceRequests,
+  updateServiceRequestStatus,
+} from "../services/service-request.service";
 import type { ServiceRequestFilters } from "../types/service-request.types";
 import { AppError } from "../utils/app-error";
-import{documentFile,uploadDocuments}from"../services/service-document.service";
+import {
+  documentFile,
+  uploadDocuments,
+} from "../services/service-document.service";
 
 const statuses = Object.values(ServiceRequestStatus);
-function auth(request: Request) { if (!request.user) throw new AppError(401, "Authentication required"); return request.user; }
-function positive(value: unknown, name: string) { const parsed = Number(value); if (!Number.isInteger(parsed) || parsed <= 0) throw new AppError(400, `${name} must be a positive integer`); return parsed; }
-function optionalPositive(value: unknown, name: string) { return value === undefined || value === "" ? undefined : positive(value, name); }
-function text(value: unknown, name: string, required = false, max = 1000) { if (value === undefined || value === null || value === "") { if (required) throw new AppError(400, `${name} is required`); return undefined; } if (typeof value !== "string" || !value.trim()) throw new AppError(400, `${name} must be a non-empty string`); if (value.trim().length > max) throw new AppError(400, `${name} must be ${max} characters or fewer`); return value.trim(); }
-function coordinate(value: unknown, name: string, min: number, max: number) { if (value === undefined || value === null || value === "") return undefined; const parsed = Number(value); if (!Number.isFinite(parsed) || parsed < min || parsed > max) throw new AppError(400, `${name} must be between ${min} and ${max}`); return parsed; }
-function status(value: unknown) { if (typeof value !== "string" || !statuses.includes(value as ServiceRequestStatus)) throw new AppError(400, "Invalid service request status"); return value as ServiceRequestStatus; }
-function optionalStatus(value: unknown) { return value === undefined || value === "" ? undefined : status(value); }
-function paging(query: Request["query"]): ServiceRequestFilters { const page = query.page === undefined ? 1 : positive(query.page, "page"); const limit = query.limit === undefined ? 10 : positive(query.limit, "limit"); if (limit > 100) throw new AppError(400, "limit cannot exceed 100"); return { page, limit, status: optionalStatus(query.status), serviceId: optionalPositive(query.serviceId, "serviceId"), departmentId: optionalPositive(query.departmentId, "departmentId"), assignedEmployeeId: optionalPositive(query.assignedEmployeeId, "assignedEmployeeId"), citizenId: optionalPositive(query.citizenId, "citizenId") }; }
-function date(value: unknown) { if (value === undefined || value === null || value === "") return undefined; if (typeof value !== "string") throw new AppError(400, "preferredDate must be a date"); const parsed = new Date(value); if (Number.isNaN(parsed.getTime())) throw new AppError(400, "preferredDate must be a valid date"); return parsed; }
+function auth(request: Request) {
+  if (!request.user) throw new AppError(401, "Authentication required");
+  return request.user;
+}
+function positive(value: unknown, name: string) {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed <= 0)
+    throw new AppError(400, `${name} must be a positive integer`);
+  return parsed;
+}
+function optionalPositive(value: unknown, name: string) {
+  return value === undefined || value === ""
+    ? undefined
+    : positive(value, name);
+}
+function text(value: unknown, name: string, required = false, max = 1000) {
+  if (value === undefined || value === null || value === "") {
+    if (required) throw new AppError(400, `${name} is required`);
+    return undefined;
+  }
+  if (typeof value !== "string" || !value.trim())
+    throw new AppError(400, `${name} must be a non-empty string`);
+  if (value.trim().length > max)
+    throw new AppError(400, `${name} must be ${max} characters or fewer`);
+  return value.trim();
+}
+function coordinate(value: unknown, name: string, min: number, max: number) {
+  if (value === undefined || value === null || value === "") return undefined;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < min || parsed > max)
+    throw new AppError(400, `${name} must be between ${min} and ${max}`);
+  return parsed;
+}
+function status(value: unknown) {
+  if (
+    typeof value !== "string" ||
+    !statuses.includes(value as ServiceRequestStatus)
+  )
+    throw new AppError(400, "Invalid service request status");
+  return value as ServiceRequestStatus;
+}
+function optionalStatus(value: unknown) {
+  return value === undefined || value === "" ? undefined : status(value);
+}
+function paging(query: Request["query"]): ServiceRequestFilters {
+  const page = query.page === undefined ? 1 : positive(query.page, "page");
+  const limit = query.limit === undefined ? 10 : positive(query.limit, "limit");
+  if (limit > 100) throw new AppError(400, "limit cannot exceed 100");
+  return {
+    page,
+    limit,
+    status: optionalStatus(query.status),
+    serviceId: optionalPositive(query.serviceId, "serviceId"),
+    departmentId: optionalPositive(query.departmentId, "departmentId"),
+    assignedEmployeeId: optionalPositive(
+      query.assignedEmployeeId,
+      "assignedEmployeeId",
+    ),
+    citizenId: optionalPositive(query.citizenId, "citizenId"),
+  };
+}
+function date(value: unknown) {
+  if (value === undefined || value === null || value === "") return undefined;
+  if (typeof value !== "string")
+    throw new AppError(400, "preferredDate must be a date");
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime()))
+    throw new AppError(400, "preferredDate must be a valid date");
+  return parsed;
+}
 
-export async function create(request: Request, response: Response, next: NextFunction) { try { const body = request.body as Record<string, unknown>; const latitude = coordinate(body.latitude, "latitude", -90, 90); const longitude = coordinate(body.longitude, "longitude", -180, 180); if ((latitude === undefined) !== (longitude === undefined)) throw new AppError(400, "latitude and longitude must be provided together"); const user = auth(request); response.status(201).json({ request: await createServiceRequest(user.userId, { serviceId: positive(body.serviceId, "serviceId"), description: text(body.description, "description", true, 2000)!, address: text(body.address, "address", false, 255), latitude, longitude, preferredDate: date(body.preferredDate), contactPhone: text(body.contactPhone, "contactPhone", false, 50),appointmentSlotId:optionalPositive(body.appointmentSlotId,"appointmentSlotId"),fields:body.fields as Record<string,unknown>|undefined }) }); } catch (error) { next(error); } }
-export async function mine(request: Request, response: Response, next: NextFunction) { try { response.json(await listMyServiceRequests(auth(request).userId, paging(request.query))); } catch (error) { next(error); } }
-export async function detail(request: Request, response: Response, next: NextFunction) { try { response.json({ request: await getServiceRequest(positive(request.params.id, "request id"), auth(request)) }); } catch (error) { next(error); } }
-export async function cancel(request: Request, response: Response, next: NextFunction) { try { response.json({ request: await cancelServiceRequest(positive(request.params.id, "request id"), auth(request).userId) }); } catch (error) { next(error); } }
-export async function managed(request: Request, response: Response, next: NextFunction) { try { response.json(await listManagedServiceRequests(auth(request), paging(request.query))); } catch (error) { next(error); } }
-export async function assign(request: Request, response: Response, next: NextFunction) { try { response.json({ request: await assignServiceRequest(positive(request.params.id, "request id"), auth(request), positive((request.body as Record<string, unknown>).employeeId, "employeeId")) }); } catch (error) { next(error); } }
-export async function changeStatus(request: Request, response: Response, next: NextFunction) { try { const body = request.body as Record<string, unknown>; response.json({ request: await updateServiceRequestStatus(positive(request.params.id, "request id"), auth(request), { status: status(body.status), note: text(body.note, "note", false, 1000), municipalityResponse: text(body.municipalityResponse, "municipalityResponse", false, 2000) }) }); } catch (error) { next(error); } }
-export async function uploadDocumentsController(request:Request,response:Response,next:NextFunction){try{response.status(201).json({documents:await uploadDocuments(positive(request.params.id,"request id"),auth(request),(request.files as Express.Multer.File[]|undefined)??[])})}catch(error){next(error)}}
-export async function downloadDocument(request:Request,response:Response,next:NextFunction){try{const document=await documentFile(positive(request.params.id,"request id"),positive(request.params.documentId,"document id"),auth(request));response.type(document.mimeType);response.setHeader("Content-Disposition",`attachment; filename*=UTF-8''${encodeURIComponent(document.originalFileName)}`);response.sendFile(document.filePath)}catch(error){next(error)}}
+export async function create(
+  request: Request,
+  response: Response,
+  next: NextFunction,
+) {
+  try {
+    const body = request.body as Record<string, unknown>;
+    const latitude = coordinate(body.latitude, "latitude", -90, 90);
+    const longitude = coordinate(body.longitude, "longitude", -180, 180);
+    if ((latitude === undefined) !== (longitude === undefined))
+      throw new AppError(
+        400,
+        "latitude and longitude must be provided together",
+      );
+    if (latitude === undefined || longitude === undefined)
+      throw new AppError(400, "Select a location for your service request");
+    const preferredDate = date(body.preferredDate);
+    if (!preferredDate) throw new AppError(400, "Appointment date is required");
+    const user = auth(request);
+    response.status(201).json({
+      request: await createServiceRequest(user.userId, {
+        serviceId: positive(body.serviceId, "serviceId"),
+        description: text(body.description, "description", true, 2000)!,
+        address: text(body.address, "address", true, 255)!,
+        latitude,
+        longitude,
+        preferredDate,
+        contactPhone: text(body.contactPhone, "contactPhone", true, 50)!,
+        appointmentSlotId: optionalPositive(
+          body.appointmentSlotId,
+          "appointmentSlotId",
+        ),
+        fields: body.fields as Record<string, unknown> | undefined,
+      }),
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+export async function mine(
+  request: Request,
+  response: Response,
+  next: NextFunction,
+) {
+  try {
+    response.json(
+      await listMyServiceRequests(auth(request).userId, paging(request.query)),
+    );
+  } catch (error) {
+    next(error);
+  }
+}
+export async function detail(
+  request: Request,
+  response: Response,
+  next: NextFunction,
+) {
+  try {
+    response.json({
+      request: await getServiceRequest(
+        positive(request.params.id, "request id"),
+        auth(request),
+      ),
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+export async function cancel(
+  request: Request,
+  response: Response,
+  next: NextFunction,
+) {
+  try {
+    response.json({
+      request: await cancelServiceRequest(
+        positive(request.params.id, "request id"),
+        auth(request).userId,
+      ),
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+export async function managed(
+  request: Request,
+  response: Response,
+  next: NextFunction,
+) {
+  try {
+    response.json(
+      await listManagedServiceRequests(auth(request), paging(request.query)),
+    );
+  } catch (error) {
+    next(error);
+  }
+}
+export async function assign(
+  request: Request,
+  response: Response,
+  next: NextFunction,
+) {
+  try {
+    response.json({
+      request: await assignServiceRequest(
+        positive(request.params.id, "request id"),
+        auth(request),
+        positive(
+          (request.body as Record<string, unknown>).employeeId,
+          "employeeId",
+        ),
+      ),
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+export async function changeStatus(
+  request: Request,
+  response: Response,
+  next: NextFunction,
+) {
+  try {
+    const body = request.body as Record<string, unknown>;
+    response.json({
+      request: await updateServiceRequestStatus(
+        positive(request.params.id, "request id"),
+        auth(request),
+        {
+          status: status(body.status),
+          note: text(body.note, "note", false, 1000),
+          municipalityResponse: text(
+            body.municipalityResponse,
+            "municipalityResponse",
+            false,
+            2000,
+          ),
+        },
+      ),
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+export async function uploadDocumentsController(
+  request: Request,
+  response: Response,
+  next: NextFunction,
+) {
+  try {
+    response.status(201).json({
+      documents: await uploadDocuments(
+        positive(request.params.id, "request id"),
+        auth(request),
+        (request.files as Express.Multer.File[] | undefined) ?? [],
+      ),
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+export async function downloadDocument(
+  request: Request,
+  response: Response,
+  next: NextFunction,
+) {
+  try {
+    const document = await documentFile(
+      positive(request.params.id, "request id"),
+      positive(request.params.documentId, "document id"),
+      auth(request),
+    );
+    response.type(document.mimeType);
+    response.setHeader(
+      "Content-Disposition",
+      `attachment; filename*=UTF-8''${encodeURIComponent(document.originalFileName)}`,
+    );
+    response.sendFile(document.filePath);
+  } catch (error) {
+    next(error);
+  }
+}

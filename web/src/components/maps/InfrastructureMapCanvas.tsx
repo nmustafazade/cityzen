@@ -2,7 +2,13 @@
 
 import Link from "next/link";
 import { useEffect } from "react";
-import { CircleMarker, MapContainer, Popup, TileLayer, useMap } from "react-leaflet";
+import {
+  CircleMarker,
+  MapContainer,
+  Popup,
+  TileLayer,
+  useMap,
+} from "react-leaflet";
 import type { InfrastructureMarker } from "./InfrastructureMap";
 
 const colors = {
@@ -14,11 +20,22 @@ const colors = {
   issue: "#8b5cf6",
   alert: "#f59e0b",
 } as const;
-function ViewController({ markers, center, fitResults }: { markers: InfrastructureMarker[]; center?: [number, number]; fitResults: boolean }) {
+function ViewController({
+  markers,
+  center,
+  fitResults,
+}: {
+  markers: InfrastructureMarker[];
+  center?: [number, number];
+  fitResults: boolean;
+}) {
   const map = useMap();
   useEffect(() => {
     if (fitResults && markers.length) {
-      map.fitBounds(markers.map(m => [m.latitude, m.longitude] as [number, number]), { padding: [35, 35], maxZoom: 15 });
+      map.fitBounds(
+        markers.map((m) => [m.latitude, m.longitude] as [number, number]),
+        { padding: [35, 35], maxZoom: 15 },
+      );
     }
   }, [map, markers, fitResults]);
   useEffect(() => {
@@ -47,7 +64,11 @@ export default function InfrastructureMapCanvas({
       scrollWheelZoom
       className="h-[430px] w-full"
     >
-      <ViewController markers={markers} center={center} fitResults={fitResults} />
+      <ViewController
+        markers={markers}
+        center={center}
+        fitResults={fitResults}
+      />
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

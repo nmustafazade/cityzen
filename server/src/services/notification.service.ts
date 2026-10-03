@@ -25,7 +25,9 @@ const notificationSelect = {
   readAt: true,
   createdAt: true,
   report: { select: { id: true, title: true, status: true } },
-  serviceRequest: { select: { id: true, status: true, service: { select: { title: true } } } },
+  serviceRequest: {
+    select: { id: true, status: true, service: { select: { title: true } } },
+  },
   emergencyAlert: { select: { id: true, title: true, severity: true } },
   actor: { select: { id: true, firstName: true, lastName: true, role: true } },
 } as const;
@@ -84,7 +86,10 @@ export async function markNotificationRead(id: number, userId: number) {
   });
   if (!notification) throw new AppError(404, "Notification not found");
   if (notification.isRead) {
-    return database.notification.findUniqueOrThrow({ where: { id }, select: notificationSelect });
+    return database.notification.findUniqueOrThrow({
+      where: { id },
+      select: notificationSelect,
+    });
   }
   return database.notification.update({
     where: { id },

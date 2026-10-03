@@ -1,7 +1,13 @@
 import Image from "next/image";
 import { resolveMediaUrl } from "@/lib/media";
 
-export function ContentCoverImage({ imageUrl, alt }: { imageUrl: string | null; alt: string }) {
+export function ContentCoverImage({
+  imageUrl,
+  alt,
+}: {
+  imageUrl: string | null;
+  alt: string;
+}) {
   if (!imageUrl) return null;
   const src = resolveMediaUrl(imageUrl);
   if (!src) return null;

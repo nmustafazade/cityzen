@@ -57,11 +57,17 @@ export function CitizenRoute({ children }: { children: ReactNode }) {
       ) : (
         <main className="mx-auto flex min-h-[70vh] max-w-xl items-center px-6 text-center">
           <section className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
-            <h1 className="text-2xl font-bold text-slate-950">Citizen reports</h1>
+            <h1 className="text-2xl font-bold text-slate-950">
+              Citizen reports
+            </h1>
             <p className="mt-3 text-sm leading-6 text-slate-600">
-              This area is currently available to citizen accounts. Employee and admin report management will be added later.
+              This area is currently available to citizen accounts. Employee and
+              admin report management will be added later.
             </p>
-            <Link href="/dashboard" className="mt-6 inline-flex rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600">
+            <Link
+              href="/dashboard"
+              className="mt-6 inline-flex rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
+            >
               Return to Dashboard
             </Link>
           </section>
@@ -73,7 +79,10 @@ export function CitizenRoute({ children }: { children: ReactNode }) {
 
 export function StaffRoute({ children }: { children: ReactNode }) {
   const { user } = useAuth();
-  const isStaff = user?.role === "EMPLOYEE" || user?.role === "DEPARTMENT_HEAD" || user?.role === "ADMIN";
+  const isStaff =
+    user?.role === "EMPLOYEE" ||
+    user?.role === "DEPARTMENT_HEAD" ||
+    user?.role === "ADMIN";
 
   return (
     <ProtectedRoute>
@@ -84,9 +93,13 @@ export function StaffRoute({ children }: { children: ReactNode }) {
           <section className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
             <h1 className="text-2xl font-bold text-slate-950">Access denied</h1>
             <p className="mt-3 text-sm leading-6 text-slate-600">
-              Report management is available to municipality employees, department heads, and administrators.
+              Report management is available to municipality employees,
+              department heads, and administrators.
             </p>
-            <Link href="/dashboard" className="mt-6 inline-flex rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600">
+            <Link
+              href="/dashboard"
+              className="mt-6 inline-flex rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
+            >
               Return to Dashboard
             </Link>
           </section>
@@ -107,8 +120,16 @@ export function AdminRoute({ children }: { children: ReactNode }) {
         <main className="mx-auto flex min-h-[70vh] max-w-xl items-center px-6 text-center">
           <section className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
             <h1 className="text-2xl font-bold text-slate-950">Access denied</h1>
-            <p className="mt-3 text-sm leading-6 text-slate-600">Administrator access is required to manage Cityzen municipality settings.</p>
-            <Link href="/dashboard" className="mt-6 inline-flex rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600">Return to Dashboard</Link>
+            <p className="mt-3 text-sm leading-6 text-slate-600">
+              Administrator access is required to manage Cityzen municipality
+              settings.
+            </p>
+            <Link
+              href="/dashboard"
+              className="mt-6 inline-flex rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
+            >
+              Return to Dashboard
+            </Link>
           </section>
         </main>
       )}
@@ -119,5 +140,27 @@ export function AdminRoute({ children }: { children: ReactNode }) {
 export function MunicipalityRoute({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const allowed = user?.role === "DEPARTMENT_HEAD" || user?.role === "ADMIN";
-  return <ProtectedRoute>{allowed ? children : <main className="mx-auto flex min-h-[70vh] max-w-xl items-center px-6 text-center"><section className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm"><h1 className="text-2xl font-bold">Access denied</h1><p className="mt-3 text-slate-600">Municipal publishing is available to department heads and administrators.</p><Link href="/dashboard" className="mt-6 inline-flex font-semibold text-emerald-700">Return to Dashboard</Link></section></main>}</ProtectedRoute>;
+  return (
+    <ProtectedRoute>
+      {allowed ? (
+        children
+      ) : (
+        <main className="mx-auto flex min-h-[70vh] max-w-xl items-center px-6 text-center">
+          <section className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+            <h1 className="text-2xl font-bold">Access denied</h1>
+            <p className="mt-3 text-slate-600">
+              Municipal publishing is available to department heads and
+              administrators.
+            </p>
+            <Link
+              href="/dashboard"
+              className="mt-6 inline-flex font-semibold text-emerald-700"
+            >
+              Return to Dashboard
+            </Link>
+          </section>
+        </main>
+      )}
+    </ProtectedRoute>
+  );
 }

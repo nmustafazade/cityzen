@@ -26,11 +26,15 @@ export async function apiRequest<T>(
   options: ApiRequestOptions = {},
 ): Promise<T> {
   if (!API_URL) {
-    throw new ApiError("The web application is not configured to reach the API.", 0);
+    throw new ApiError(
+      "The web application is not configured to reach the API.",
+      0,
+    );
   }
 
   const headers = new Headers(options.headers);
-  const isFormData = typeof FormData !== "undefined" && options.body instanceof FormData;
+  const isFormData =
+    typeof FormData !== "undefined" && options.body instanceof FormData;
   if (!isFormData) headers.set("Content-Type", "application/json");
   const token = options.token === undefined ? getStoredToken() : options.token;
 
@@ -40,7 +44,9 @@ export async function apiRequest<T>(
 
   let requestBody: BodyInit | undefined;
   if (options.body !== undefined) {
-    requestBody = isFormData ? options.body as FormData : JSON.stringify(options.body);
+    requestBody = isFormData
+      ? (options.body as FormData)
+      : JSON.stringify(options.body);
   }
 
   let response: Response;
@@ -55,7 +61,8 @@ export async function apiRequest<T>(
     throw new ApiError("Unable to connect to Cityzen. Please try again.", 0);
   }
 
-  const data = (await response.json().catch(() => null)) as ApiErrorBody | T | null;
+  const data = (await response.json().catch(() => null)) as
+    ApiErrorBody | T | null;
 
   if (!response.ok) {
     const message =

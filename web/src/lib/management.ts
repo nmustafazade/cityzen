@@ -13,7 +13,9 @@ export interface ManagementEmployee {
 }
 
 export function getManagementDepartments() {
-  return apiRequest<{ departments: Department[] }>("/api/management/departments");
+  return apiRequest<{ departments: Department[] }>(
+    "/api/management/departments",
+  );
 }
 
 export function getPublicDepartments() {
@@ -22,5 +24,7 @@ export function getPublicDepartments() {
 
 export function getManagementEmployees(departmentId?: number) {
   const query = departmentId ? `?departmentId=${departmentId}` : "";
-  return apiRequest<{ employees: ManagementEmployee[] }>(`/api/management/employees${query}`);
+  return apiRequest<{ employees: ManagementEmployee[] }>(
+    `/api/management/employees${query}`,
+  );
 }

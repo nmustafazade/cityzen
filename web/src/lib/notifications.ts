@@ -1,7 +1,12 @@
 import { apiRequest } from "./api";
-import type { Notification, NotificationListResponse } from "@/types/notification";
+import type {
+  Notification,
+  NotificationListResponse,
+} from "@/types/notification";
 
-export function getNotifications(params: { page?: number; limit?: number; unreadOnly?: boolean } = {}) {
+export function getNotifications(
+  params: { page?: number; limit?: number; unreadOnly?: boolean } = {},
+) {
   const query = new URLSearchParams();
   if (params.page) query.set("page", String(params.page));
   if (params.limit) query.set("limit", String(params.limit));
@@ -15,9 +20,12 @@ export function getUnreadNotificationCount() {
 }
 
 export function markNotificationRead(id: number) {
-  return apiRequest<{ notification: Notification }>(`/api/notifications/${id}/read`, {
-    method: "PATCH",
-  });
+  return apiRequest<{ notification: Notification }>(
+    `/api/notifications/${id}/read`,
+    {
+      method: "PATCH",
+    },
+  );
 }
 
 export function markAllNotificationsRead() {

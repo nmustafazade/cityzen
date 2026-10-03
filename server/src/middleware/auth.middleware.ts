@@ -39,15 +39,20 @@ export function authenticate(
     return;
   }
 
-  void database.user.findUnique({
-    where: { id: tokenUser.userId },
-    select: { id: true, role: true, isActive: true },
-  }).then((user) => {
-    if (!user?.isActive) {
-      response.status(401).json({ status: "error", message: "Authentication required" });
-      return;
-    }
-    request.user = { userId: user.id, role: user.role };
-    next();
-  }).catch(next);
+  void database.user
+    .findUnique({
+      where: { id: tokenUser.userId },
+      select: { id: true, role: true, isActive: true },
+    })
+    .then((user) => {
+      if (!user?.isActive) {
+        response
+          .status(401)
+          .json({ status: "error", message: "Authentication required" });
+        return;
+      }
+      request.user = { userId: user.id, role: user.role };
+      next();
+    })
+    .catch(next);
 }

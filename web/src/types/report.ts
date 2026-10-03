@@ -61,7 +61,7 @@ export interface Report {
   statusHistory?: ReportStatusHistory[];
   upvoteCount?: number;
   hasUpvoted?: boolean;
-  isPublic?:boolean;
+  isPublic?: boolean;
 }
 
 export interface ReportCommentUser {
@@ -148,7 +148,7 @@ export interface CreateReportData {
   addressText: string;
   latitude: number;
   longitude: number;
-  isPublic?:boolean;
+  isPublic?: boolean;
 }
 
 export interface ManageReportsParams extends MyReportsParams {

@@ -1,12 +1,129 @@
 import { EnvironmentalMetric } from "@prisma/client";
-import type{NextFunction,Request,Response}from"express";
-import*as service from"../services/environment.service";
-import{AppError}from"../utils/app-error";
-const metrics=Object.values(EnvironmentalMetric),auth=(r:Request)=>{if(!r.user)throw new AppError(401,"Authentication required");return r.user},positive=(v:unknown,n:string)=>{const x=Number(v);if(!Number.isInteger(x)||x<=0)throw new AppError(400,`${n} must be positive`);return x},coordinate=(v:unknown,n:string,min:number,max:number)=>{const x=Number(v);if(!Number.isFinite(x)||x<min||x>max)throw new AppError(400,`Invalid ${n}`);return x},text=(v:unknown,n:string,required=false)=>{if(v===undefined||v===null||v===""){if(required)throw new AppError(400,`${n} is required`);return undefined}if(typeof v!=="string"||!v.trim())throw new AppError(400,`Invalid ${n}`);return v.trim()};
-export async function weather(r:Request,s:Response,n:NextFunction){try{s.json(await service.weather(coordinate(r.query.latitude,"latitude",-90,90),coordinate(r.query.longitude,"longitude",-180,180)))}catch(e){n(e)}}
-export async function current(r:Request,s:Response,n:NextFunction){try{s.json(await service.currentEnvironment(coordinate(r.query.latitude,"latitude",-90,90),coordinate(r.query.longitude,"longitude",-180,180)))}catch(e){n(e)}}
-export async function stations(_r:Request,s:Response,n:NextFunction){try{s.json({stations:await service.stations()})}catch(e){n(e)}}
-export async function station(r:Request,s:Response,n:NextFunction){try{s.json({station:await service.station(positive(r.params.id,"station id"))})}catch(e){n(e)}}
-export async function managed(r:Request,s:Response,n:NextFunction){try{s.json({stations:await service.managedStations(auth(r))})}catch(e){n(e)}}
-export async function save(r:Request,s:Response,n:NextFunction){try{const b=r.body as Record<string,unknown>;s.json({station:await service.saveStation(auth(r),{id:b.id?positive(b.id,"id"):undefined,departmentId:b.departmentId===null?null:b.departmentId?positive(b.departmentId,"departmentId"):undefined,name:text(b.name,"name",true)!,description:text(b.description,"description"),latitude:coordinate(b.latitude,"latitude",-90,90),longitude:coordinate(b.longitude,"longitude",-180,180),address:text(b.address,"address"),isActive:typeof b.isActive==="boolean"?b.isActive:undefined})})}catch(e){n(e)}}
-export async function measurement(r:Request,s:Response,n:NextFunction){try{const b=r.body as Record<string,unknown>;if(typeof b.metric!=="string"||!metrics.includes(b.metric as EnvironmentalMetric))throw new AppError(400,"Invalid metric");const value=Number(b.value),measuredAt=new Date(String(b.measuredAt));if(!Number.isFinite(value)||Number.isNaN(measuredAt.getTime()))throw new AppError(400,"Invalid measurement");s.status(201).json({measurement:await service.addMeasurement(auth(r),positive(r.params.id,"station id"),{metric:b.metric as EnvironmentalMetric,value,unit:text(b.unit,"unit",true)!,measuredAt})})}catch(e){n(e)}}
+import type { NextFunction, Request, Response } from "express";
+import * as service from "../services/environment.service";
+import { AppError } from "../utils/app-error";
+const metrics = Object.values(EnvironmentalMetric),
+  auth = (r: Request) => {
+    if (!r.user) throw new AppError(401, "Authentication required");
+    return r.user;
+  },
+  positive = (v: unknown, n: string) => {
+    const x = Number(v);
+    if (!Number.isInteger(x) || x <= 0)
+      throw new AppError(400, `${n} must be positive`);
+    return x;
+  },
+  coordinate = (v: unknown, n: string, min: number, max: number) => {
+    const x = Number(v);
+    if (!Number.isFinite(x) || x < min || x > max)
+      throw new AppError(400, `Invalid ${n}`);
+    return x;
+  },
+  text = (v: unknown, n: string, required = false) => {
+    if (v === undefined || v === null || v === "") {
+      if (required) throw new AppError(400, `${n} is required`);
+      return undefined;
+    }
+    if (typeof v !== "string" || !v.trim())
+      throw new AppError(400, `Invalid ${n}`);
+    return v.trim();
+  };
+export async function weather(r: Request, s: Response, n: NextFunction) {
+  try {
+    s.json(
+      await service.weather(
+        coordinate(r.query.latitude, "latitude", -90, 90),
+        coordinate(r.query.longitude, "longitude", -180, 180),
+      ),
+    );
+  } catch (e) {
+    n(e);
+  }
+}
+export async function current(r: Request, s: Response, n: NextFunction) {
+  try {
+    s.json(
+      await service.currentEnvironment(
+        coordinate(r.query.latitude, "latitude", -90, 90),
+        coordinate(r.query.longitude, "longitude", -180, 180),
+      ),
+    );
+  } catch (e) {
+    n(e);
+  }
+}
+export async function stations(_r: Request, s: Response, n: NextFunction) {
+  try {
+    s.json({ stations: await service.stations() });
+  } catch (e) {
+    n(e);
+  }
+}
+export async function station(r: Request, s: Response, n: NextFunction) {
+  try {
+    s.json({
+      station: await service.station(positive(r.params.id, "station id")),
+    });
+  } catch (e) {
+    n(e);
+  }
+}
+export async function managed(r: Request, s: Response, n: NextFunction) {
+  try {
+    s.json({ stations: await service.managedStations(auth(r)) });
+  } catch (e) {
+    n(e);
+  }
+}
+export async function save(r: Request, s: Response, n: NextFunction) {
+  try {
+    const b = r.body as Record<string, unknown>;
+    s.json({
+      station: await service.saveStation(auth(r), {
+        id: b.id ? positive(b.id, "id") : undefined,
+        departmentId:
+          b.departmentId === null
+            ? null
+            : b.departmentId
+              ? positive(b.departmentId, "departmentId")
+              : undefined,
+        name: text(b.name, "name", true)!,
+        description: text(b.description, "description"),
+        latitude: coordinate(b.latitude, "latitude", -90, 90),
+        longitude: coordinate(b.longitude, "longitude", -180, 180),
+        address: text(b.address, "address"),
+        isActive: typeof b.isActive === "boolean" ? b.isActive : undefined,
+      }),
+    });
+  } catch (e) {
+    n(e);
+  }
+}
+export async function measurement(r: Request, s: Response, n: NextFunction) {
+  try {
+    const b = r.body as Record<string, unknown>;
+    if (
+      typeof b.metric !== "string" ||
+      !metrics.includes(b.metric as EnvironmentalMetric)
+    )
+      throw new AppError(400, "Invalid metric");
+    const value = Number(b.value),
+      measuredAt = new Date(String(b.measuredAt));
+    if (!Number.isFinite(value) || Number.isNaN(measuredAt.getTime()))
+      throw new AppError(400, "Invalid measurement");
+    s.status(201).json({
+      measurement: await service.addMeasurement(
+        auth(r),
+        positive(r.params.id, "station id"),
+        {
+          metric: b.metric as EnvironmentalMetric,
+          value,
+          unit: text(b.unit, "unit", true)!,
+          measuredAt,
+        },
+      ),
+    });
+  } catch (e) {
+    n(e);
+  }
+}

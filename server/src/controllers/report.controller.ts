@@ -19,7 +19,11 @@ import type {
   MyReportFilters,
 } from "../types/report.types";
 import { AppError } from "../utils/app-error";
-import{moderate,setVisibility,similarReports}from"../services/public-report.service";
+import {
+  moderate,
+  setVisibility,
+  similarReports,
+} from "../services/public-report.service";
 
 const reportStatuses = Object.values(ReportStatus);
 const reportPriorities = Object.values(ReportPriority);
@@ -33,7 +37,8 @@ function requiredString(value: unknown, field: string): string {
 
 function optionalString(value: unknown, field: string): string | undefined {
   if (value === undefined || value === null || value === "") return undefined;
-  if (typeof value !== "string") throw new AppError(400, `${field} must be a string`);
+  if (typeof value !== "string")
+    throw new AppError(400, `${field} must be a string`);
   return value;
 }
 
@@ -45,7 +50,10 @@ function positiveInteger(value: unknown, field: string): number {
   return parsed;
 }
 
-function optionalPositiveInteger(value: unknown, field: string): number | undefined {
+function optionalPositiveInteger(
+  value: unknown,
+  field: string,
+): number | undefined {
   return value === undefined ? undefined : positiveInteger(value, field);
 }
 
@@ -58,7 +66,10 @@ function coordinate(
   if (value === undefined || value === null || value === "") return undefined;
   const parsed = typeof value === "number" ? value : Number(value);
   if (!Number.isFinite(parsed) || parsed < minimum || parsed > maximum) {
-    throw new AppError(400, `${field} must be between ${minimum} and ${maximum}`);
+    throw new AppError(
+      400,
+      `${field} must be between ${minimum} and ${maximum}`,
+    );
   }
   return parsed;
 }
@@ -76,30 +87,40 @@ function requiredCoordinate(
 
 function validImageUrls(value: unknown): string[] | undefined {
   if (value === undefined) return undefined;
-  if (!Array.isArray(value)) throw new AppError(400, "imageUrls must be an array");
+  if (!Array.isArray(value))
+    throw new AppError(400, "imageUrls must be an array");
 
   return value.map((item) => {
-    if (typeof item !== "string") throw new AppError(400, "Each image URL must be valid");
+    if (typeof item !== "string")
+      throw new AppError(400, "Each image URL must be valid");
     try {
       const url = new URL(item);
       if (!["http:", "https:"].includes(url.protocol)) throw new Error();
       return item;
     } catch {
-      throw new AppError(400, "Each image URL must be a valid HTTP or HTTPS URL");
+      throw new AppError(
+        400,
+        "Each image URL must be a valid HTTP or HTTPS URL",
+      );
     }
   });
 }
 
 function pagination(query: Request["query"]) {
-  const page = query.page === undefined ? 1 : positiveInteger(query.page, "page");
-  const limit = query.limit === undefined ? 10 : positiveInteger(query.limit, "limit");
+  const page =
+    query.page === undefined ? 1 : positiveInteger(query.page, "page");
+  const limit =
+    query.limit === undefined ? 10 : positiveInteger(query.limit, "limit");
   if (limit > 100) throw new AppError(400, "limit cannot exceed 100");
   return { page, limit };
 }
 
 function parseStatus(value: unknown): ReportStatus | undefined {
   if (value === undefined) return undefined;
-  if (typeof value !== "string" || !reportStatuses.includes(value as ReportStatus)) {
+  if (
+    typeof value !== "string" ||
+    !reportStatuses.includes(value as ReportStatus)
+  ) {
     throw new AppError(400, "Invalid report status");
   }
   return value as ReportStatus;
@@ -107,7 +128,10 @@ function parseStatus(value: unknown): ReportStatus | undefined {
 
 function parsePriority(value: unknown): ReportPriority | undefined {
   if (value === undefined) return undefined;
-  if (typeof value !== "string" || !reportPriorities.includes(value as ReportPriority)) {
+  if (
+    typeof value !== "string" ||
+    !reportPriorities.includes(value as ReportPriority)
+  ) {
     throw new AppError(400, "Invalid report priority");
   }
   return value as ReportPriority;
@@ -119,10 +143,12 @@ function authenticatedUser(request: Request) {
 }
 
 function parseCreateBody(body: unknown): CreateReportInput {
-  if (!body || typeof body !== "object") throw new AppError(400, "Invalid request body");
+  if (!body || typeof body !== "object")
+    throw new AppError(400, "Invalid request body");
   const input = body as Record<string, unknown>;
   const addressText = requiredString(input.addressText, "address").trim();
-  if (addressText.length > 180) throw new AppError(400, "address must be 180 characters or fewer");
+  if (addressText.length > 180)
+    throw new AppError(400, "address must be 180 characters or fewer");
   return {
     title: requiredString(input.title, "title"),
     description: requiredString(input.description, "description"),
@@ -142,13 +168,74 @@ export async function create(
 ): Promise<void> {
   try {
     const user = authenticatedUser(request);
-    response.status(201).json({ report: await createReport(user.userId, parseCreateBody(request.body)) });
-  } catch (error) { next(error); }
+    response.status(201).json({
+      report: await createReport(user.userId, parseCreateBody(request.body)),
+    });
+  } catch (error) {
+    next(error);
+  }
 }
 
-export async function similar(request:Request,response:Response,next:NextFunction){try{response.json({reports:await similarReports(positiveInteger(request.query.categoryId,"categoryId"),requiredCoordinate(request.query.latitude,"latitude",-90,90),requiredCoordinate(request.query.longitude,"longitude",-180,180),typeof request.query.title==="string"?request.query.title:undefined)})}catch(error){next(error)}}
-export async function visibility(request:Request,response:Response,next:NextFunction){try{if(typeof(request.body as Record<string,unknown>).isPublic!=="boolean")throw new AppError(400,"isPublic must be a boolean");response.json({report:await setVisibility(positiveInteger(request.params.id,"report id"),authenticatedUser(request),(request.body as Record<string,unknown>).isPublic as boolean)})}catch(error){next(error)}}
-export async function moderation(request:Request,response:Response,next:NextFunction){try{const body=request.body as Record<string,unknown>;if(typeof body.hidden!=="boolean")throw new AppError(400,"hidden must be a boolean");response.json({report:await moderate(positiveInteger(request.params.id,"report id"),authenticatedUser(request),body.hidden,optionalString(body.reason,"reason"))})}catch(error){next(error)}}
+export async function similar(
+  request: Request,
+  response: Response,
+  next: NextFunction,
+) {
+  try {
+    response.json({
+      reports: await similarReports(
+        positiveInteger(request.query.categoryId, "categoryId"),
+        requiredCoordinate(request.query.latitude, "latitude", -90, 90),
+        requiredCoordinate(request.query.longitude, "longitude", -180, 180),
+        typeof request.query.title === "string"
+          ? request.query.title
+          : undefined,
+      ),
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+export async function visibility(
+  request: Request,
+  response: Response,
+  next: NextFunction,
+) {
+  try {
+    if (typeof (request.body as Record<string, unknown>).isPublic !== "boolean")
+      throw new AppError(400, "isPublic must be a boolean");
+    response.json({
+      report: await setVisibility(
+        positiveInteger(request.params.id, "report id"),
+        authenticatedUser(request),
+        (request.body as Record<string, unknown>).isPublic as boolean,
+      ),
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+export async function moderation(
+  request: Request,
+  response: Response,
+  next: NextFunction,
+) {
+  try {
+    const body = request.body as Record<string, unknown>;
+    if (typeof body.hidden !== "boolean")
+      throw new AppError(400, "hidden must be a boolean");
+    response.json({
+      report: await moderate(
+        positiveInteger(request.params.id, "report id"),
+        authenticatedUser(request),
+        body.hidden,
+        optionalString(body.reason, "reason"),
+      ),
+    });
+  } catch (error) {
+    next(error);
+  }
+}
 
 export async function myReports(
   request: Request,
@@ -160,10 +247,15 @@ export async function myReports(
     const filters: MyReportFilters = {
       ...pagination(request.query),
       status: parseStatus(request.query.status),
-      categoryId: optionalPositiveInteger(request.query.categoryId, "categoryId"),
+      categoryId: optionalPositiveInteger(
+        request.query.categoryId,
+        "categoryId",
+      ),
     };
     response.json(await listMyReports(user.userId, filters));
-  } catch (error) { next(error); }
+  } catch (error) {
+    next(error);
+  }
 }
 
 export async function byId(
@@ -178,7 +270,9 @@ export async function byId(
         authenticatedUser(request),
       ),
     });
-  } catch (error) { next(error); }
+  } catch (error) {
+    next(error);
+  }
 }
 
 export async function cancel(
@@ -189,9 +283,14 @@ export async function cancel(
   try {
     const user = authenticatedUser(request);
     response.json({
-      report: await cancelReport(positiveInteger(request.params.id, "report id"), user.userId),
+      report: await cancelReport(
+        positiveInteger(request.params.id, "report id"),
+        user.userId,
+      ),
     });
-  } catch (error) { next(error); }
+  } catch (error) {
+    next(error);
+  }
 }
 
 export async function index(
@@ -203,7 +302,10 @@ export async function index(
     const sortBy = request.query.sortBy ?? "createdAt";
     const sortOrder = request.query.sortOrder ?? "desc";
     if (!["createdAt", "updatedAt", "priority"].includes(String(sortBy))) {
-      throw new AppError(400, "sortBy must be createdAt, updatedAt, or priority");
+      throw new AppError(
+        400,
+        "sortBy must be createdAt, updatedAt, or priority",
+      );
     }
     if (!["asc", "desc"].includes(String(sortOrder))) {
       throw new AppError(400, "sortOrder must be asc or desc");
@@ -212,15 +314,26 @@ export async function index(
       ...pagination(request.query),
       status: parseStatus(request.query.status),
       priority: parsePriority(request.query.priority),
-      categoryId: optionalPositiveInteger(request.query.categoryId, "categoryId"),
-      departmentId: optionalPositiveInteger(request.query.departmentId, "departmentId"),
-      assignedEmployeeId: optionalPositiveInteger(request.query.assignedEmployeeId, "assignedEmployeeId"),
+      categoryId: optionalPositiveInteger(
+        request.query.categoryId,
+        "categoryId",
+      ),
+      departmentId: optionalPositiveInteger(
+        request.query.departmentId,
+        "departmentId",
+      ),
+      assignedEmployeeId: optionalPositiveInteger(
+        request.query.assignedEmployeeId,
+        "assignedEmployeeId",
+      ),
       citizenId: optionalPositiveInteger(request.query.citizenId, "citizenId"),
       sortBy: sortBy as ManageReportFilters["sortBy"],
       sortOrder: sortOrder as ManageReportFilters["sortOrder"],
     };
     response.json(await listReports(authenticatedUser(request), filters));
-  } catch (error) { next(error); }
+  } catch (error) {
+    next(error);
+  }
 }
 
 export async function changeStatus(
@@ -229,7 +342,8 @@ export async function changeStatus(
   next: NextFunction,
 ): Promise<void> {
   try {
-    if (!request.body || typeof request.body !== "object") throw new AppError(400, "Invalid request body");
+    if (!request.body || typeof request.body !== "object")
+      throw new AppError(400, "Invalid request body");
     const status = parseStatus(request.body.status);
     if (!status) throw new AppError(400, "status is required");
     const input: ChangeReportStatusInput = {
@@ -243,7 +357,9 @@ export async function changeStatus(
         input,
       ),
     });
-  } catch (error) { next(error); }
+  } catch (error) {
+    next(error);
+  }
 }
 
 export async function assign(
@@ -252,10 +368,17 @@ export async function assign(
   next: NextFunction,
 ): Promise<void> {
   try {
-    if (!request.body || typeof request.body !== "object") throw new AppError(400, "Invalid request body");
+    if (!request.body || typeof request.body !== "object")
+      throw new AppError(400, "Invalid request body");
     const input: AssignReportInput = {
-      departmentId: optionalPositiveInteger(request.body.departmentId, "departmentId"),
-      employeeId: optionalPositiveInteger(request.body.employeeId, "employeeId"),
+      departmentId: optionalPositiveInteger(
+        request.body.departmentId,
+        "departmentId",
+      ),
+      employeeId: optionalPositiveInteger(
+        request.body.employeeId,
+        "employeeId",
+      ),
     };
     if (!input.departmentId && !input.employeeId) {
       throw new AppError(400, "departmentId or employeeId is required");
@@ -267,7 +390,9 @@ export async function assign(
         input,
       ),
     });
-  } catch (error) { next(error); }
+  } catch (error) {
+    next(error);
+  }
 }
 
 export async function categories(
@@ -277,5 +402,7 @@ export async function categories(
 ): Promise<void> {
   try {
     response.json({ categories: await listActiveReportCategories() });
-  } catch (error) { next(error); }
+  } catch (error) {
+    next(error);
+  }
 }

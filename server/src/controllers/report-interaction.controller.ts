@@ -23,29 +23,52 @@ function positiveInteger(value: unknown, field: string): number {
   return parsed;
 }
 
-function optionalPositiveInteger(value: unknown, field: string): number | undefined {
-  return value === undefined || value === null ? undefined : positiveInteger(value, field);
+function optionalPositiveInteger(
+  value: unknown,
+  field: string,
+): number | undefined {
+  return value === undefined || value === null
+    ? undefined
+    : positiveInteger(value, field);
 }
 
 function bodyRecord(body: unknown): Record<string, unknown> {
-  if (!body || typeof body !== "object") throw new AppError(400, "Invalid request body");
+  if (!body || typeof body !== "object")
+    throw new AppError(400, "Invalid request body");
   return body as Record<string, unknown>;
 }
 
 function commentContent(value: unknown): string {
-  if (typeof value !== "string" || !value.trim()) throw new AppError(400, "Comment content is required");
+  if (typeof value !== "string" || !value.trim())
+    throw new AppError(400, "Comment content is required");
   const content = value.trim();
-  if (content.length > 1000) throw new AppError(400, "Comment content must be 1000 characters or fewer");
+  if (content.length > 1000)
+    throw new AppError(400, "Comment content must be 1000 characters or fewer");
   return content;
 }
 
-export async function comments(request: Request, response: Response, next: NextFunction): Promise<void> {
+export async function comments(
+  request: Request,
+  response: Response,
+  next: NextFunction,
+): Promise<void> {
   try {
-    response.json({ comments: await listReportComments(positiveInteger(request.params.id, "report id"), authenticatedUser(request)) });
-  } catch (error) { next(error); }
+    response.json({
+      comments: await listReportComments(
+        positiveInteger(request.params.id, "report id"),
+        authenticatedUser(request),
+      ),
+    });
+  } catch (error) {
+    next(error);
+  }
 }
 
-export async function createComment(request: Request, response: Response, next: NextFunction): Promise<void> {
+export async function createComment(
+  request: Request,
+  response: Response,
+  next: NextFunction,
+): Promise<void> {
   try {
     const body = bodyRecord(request.body);
     response.status(201).json({
@@ -56,10 +79,16 @@ export async function createComment(request: Request, response: Response, next: 
         optionalPositiveInteger(body.parentCommentId, "parentCommentId"),
       ),
     });
-  } catch (error) { next(error); }
+  } catch (error) {
+    next(error);
+  }
 }
 
-export async function deleteComment(request: Request, response: Response, next: NextFunction): Promise<void> {
+export async function deleteComment(
+  request: Request,
+  response: Response,
+  next: NextFunction,
+): Promise<void> {
   try {
     await deleteReportComment(
       positiveInteger(request.params.reportId, "report id"),
@@ -67,38 +96,70 @@ export async function deleteComment(request: Request, response: Response, next: 
       authenticatedUser(request),
     );
     response.json({ status: "ok", message: "Comment deleted" });
-  } catch (error) { next(error); }
+  } catch (error) {
+    next(error);
+  }
 }
 
-export async function toggleUpvote(request: Request, response: Response, next: NextFunction): Promise<void> {
+export async function toggleUpvote(
+  request: Request,
+  response: Response,
+  next: NextFunction,
+): Promise<void> {
   try {
-    response.json(await toggleReportUpvote(
-      positiveInteger(request.params.id, "report id"),
-      authenticatedUser(request).userId,
-    ));
-  } catch (error) { next(error); }
+    response.json(
+      await toggleReportUpvote(
+        positiveInteger(request.params.id, "report id"),
+        authenticatedUser(request).userId,
+      ),
+    );
+  } catch (error) {
+    next(error);
+  }
 }
 
-export async function feedback(request: Request, response: Response, next: NextFunction): Promise<void> {
+export async function feedback(
+  request: Request,
+  response: Response,
+  next: NextFunction,
+): Promise<void> {
   try {
-    response.json({ feedback: await getReportFeedback(positiveInteger(request.params.id, "report id"), authenticatedUser(request)) });
-  } catch (error) { next(error); }
+    response.json({
+      feedback: await getReportFeedback(
+        positiveInteger(request.params.id, "report id"),
+        authenticatedUser(request),
+      ),
+    });
+  } catch (error) {
+    next(error);
+  }
 }
 
-export async function saveFeedback(request: Request, response: Response, next: NextFunction): Promise<void> {
+export async function saveFeedback(
+  request: Request,
+  response: Response,
+  next: NextFunction,
+): Promise<void> {
   try {
     const body = bodyRecord(request.body);
-    if (typeof body.confirmed !== "boolean") throw new AppError(400, "confirmed must be a boolean");
+    if (typeof body.confirmed !== "boolean")
+      throw new AppError(400, "confirmed must be a boolean");
     const rating = Number(body.rating);
     if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
       throw new AppError(400, "rating must be an integer from 1 to 5");
     }
     let comment: string | null | undefined;
     if (body.comment === null || body.comment === "") comment = null;
-    if (body.comment !== undefined && body.comment !== null && body.comment !== "") {
-      if (typeof body.comment !== "string") throw new AppError(400, "comment must be a string");
+    if (
+      body.comment !== undefined &&
+      body.comment !== null &&
+      body.comment !== ""
+    ) {
+      if (typeof body.comment !== "string")
+        throw new AppError(400, "comment must be a string");
       comment = body.comment.trim();
-      if (comment.length > 1000) throw new AppError(400, "comment must be 1000 characters or fewer");
+      if (comment.length > 1000)
+        throw new AppError(400, "comment must be 1000 characters or fewer");
       if (!comment) comment = null;
     }
     response.json({
@@ -108,5 +169,7 @@ export async function saveFeedback(request: Request, response: Response, next: N
         { confirmed: body.confirmed, rating, comment },
       ),
     });
-  } catch (error) { next(error); }
+  } catch (error) {
+    next(error);
+  }
 }

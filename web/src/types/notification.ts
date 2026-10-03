@@ -23,8 +23,16 @@ export interface Notification {
   readAt: string | null;
   createdAt: string;
   report: { id: number; title: string; status: ReportStatus } | null;
-  serviceRequest: { id: number; status: import("./service-request").ServiceRequestStatus; service: { title: string } } | null;
-  emergencyAlert: { id: number; title: string; severity: "ADVISORY" | "WATCH" | "WARNING" | "CRITICAL" } | null;
+  serviceRequest: {
+    id: number;
+    status: import("./service-request").ServiceRequestStatus;
+    service: { title: string };
+  } | null;
+  emergencyAlert: {
+    id: number;
+    title: string;
+    severity: "ADVISORY" | "WATCH" | "WARNING" | "CRITICAL";
+  } | null;
   actor: {
     id: number;
     firstName: string;

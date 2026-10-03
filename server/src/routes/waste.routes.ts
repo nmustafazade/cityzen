@@ -3,24 +3,55 @@ import { Router } from "express";
 import * as controller from "../controllers/waste.controller";
 import { authenticate } from "../middleware/auth.middleware";
 import { authorizeRoles } from "../middleware/role.middleware";
-export const wasteRouter=Router();
-wasteRouter.get("/schedules",controller.publicSchedules);
-wasteRouter.get("/next-collections",controller.nextCollections);
-wasteRouter.get("/facilities/nearby",controller.nearby);
-wasteRouter.get("/facilities",controller.facilities);
-wasteRouter.get("/facilities/:id",controller.facility);
-wasteRouter.get("/my-schedule",authenticate,authorizeRoles(UserRole.CITIZEN),controller.mySchedule);
-wasteRouter.get("/reminders",authenticate,authorizeRoles(UserRole.CITIZEN),controller.reminders);
-wasteRouter.put("/reminders",authenticate,authorizeRoles(UserRole.CITIZEN),controller.saveReminder);
-export const municipalityWasteRouter=Router();
-municipalityWasteRouter.use(authenticate,authorizeRoles(UserRole.DEPARTMENT_HEAD,UserRole.ADMIN));
-municipalityWasteRouter.get("/zones",controller.zones);
-municipalityWasteRouter.post("/zones",controller.saveZone);
-municipalityWasteRouter.patch("/zones/:id",(r,s,n)=>{r.body={...(r.body as object),id:r.params.id};void controller.saveZone(r,s,n)});
-municipalityWasteRouter.post("/schedules",controller.saveSchedule);
-municipalityWasteRouter.patch("/schedules/:id",(r,s,n)=>{r.body={...(r.body as object),id:r.params.id};void controller.saveSchedule(r,s,n)});
-municipalityWasteRouter.post("/exceptions",controller.saveException);
-municipalityWasteRouter.get("/facilities",controller.managedFacilities);
-municipalityWasteRouter.post("/facilities",controller.saveFacility);
-municipalityWasteRouter.patch("/facilities/:id",(r,s,n)=>{r.body={...(r.body as object),id:r.params.id};void controller.saveFacility(r,s,n)});
-municipalityWasteRouter.patch("/addresses/:id/zone",authorizeRoles(UserRole.ADMIN),controller.assignAddress);
+export const wasteRouter = Router();
+wasteRouter.get("/schedules", controller.publicSchedules);
+wasteRouter.get("/next-collections", controller.nextCollections);
+wasteRouter.get("/facilities/nearby", controller.nearby);
+wasteRouter.get("/facilities", controller.facilities);
+wasteRouter.get("/facilities/:id", controller.facility);
+wasteRouter.get(
+  "/my-schedule",
+  authenticate,
+  authorizeRoles(UserRole.CITIZEN),
+  controller.mySchedule,
+);
+wasteRouter.get(
+  "/reminders",
+  authenticate,
+  authorizeRoles(UserRole.CITIZEN),
+  controller.reminders,
+);
+wasteRouter.put(
+  "/reminders",
+  authenticate,
+  authorizeRoles(UserRole.CITIZEN),
+  controller.saveReminder,
+);
+export const municipalityWasteRouter = Router();
+municipalityWasteRouter.use(
+  authenticate,
+  authorizeRoles(UserRole.DEPARTMENT_HEAD, UserRole.ADMIN),
+);
+municipalityWasteRouter.get("/zones", controller.zones);
+municipalityWasteRouter.post("/zones", controller.saveZone);
+municipalityWasteRouter.patch("/zones/:id", (r, s, n) => {
+  r.body = { ...(r.body as object), id: r.params.id };
+  void controller.saveZone(r, s, n);
+});
+municipalityWasteRouter.post("/schedules", controller.saveSchedule);
+municipalityWasteRouter.patch("/schedules/:id", (r, s, n) => {
+  r.body = { ...(r.body as object), id: r.params.id };
+  void controller.saveSchedule(r, s, n);
+});
+municipalityWasteRouter.post("/exceptions", controller.saveException);
+municipalityWasteRouter.get("/facilities", controller.managedFacilities);
+municipalityWasteRouter.post("/facilities", controller.saveFacility);
+municipalityWasteRouter.patch("/facilities/:id", (r, s, n) => {
+  r.body = { ...(r.body as object), id: r.params.id };
+  void controller.saveFacility(r, s, n);
+});
+municipalityWasteRouter.patch(
+  "/addresses/:id/zone",
+  authorizeRoles(UserRole.ADMIN),
+  controller.assignAddress,
+);

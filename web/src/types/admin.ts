@@ -51,8 +51,19 @@ export interface AdminUserFilters {
 }
 
 export interface AdminStats {
-  users: { total: number; citizens: number; employees: number; departmentHeads: number; admins: number };
-  reports: { total: number; submitted: number; inProgress: number; resolved: number };
+  users: {
+    total: number;
+    citizens: number;
+    employees: number;
+    departmentHeads: number;
+    admins: number;
+  };
+  reports: {
+    total: number;
+    submitted: number;
+    inProgress: number;
+    resolved: number;
+  };
   departments: { total: number; active: number };
   categories: { total: number; active: number };
 }

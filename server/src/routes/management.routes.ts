@@ -7,7 +7,10 @@ import { authorizeRoles } from "../middleware/role.middleware";
 
 const managementRouter = Router();
 
-managementRouter.use(authenticate, authorizeRoles(UserRole.DEPARTMENT_HEAD, UserRole.ADMIN));
+managementRouter.use(
+  authenticate,
+  authorizeRoles(UserRole.DEPARTMENT_HEAD, UserRole.ADMIN),
+);
 managementRouter.get("/departments", departments);
 managementRouter.get("/employees", employees);
 

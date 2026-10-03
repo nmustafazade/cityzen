@@ -1,2 +1,4 @@
 import { InfrastructureManager } from "@/components/infrastructure/InfrastructureManager";
-export default function Page(){return <InfrastructureManager mode="facilities"/>}
+export default function Page() {
+  return <InfrastructureManager mode="facilities" />;
+}

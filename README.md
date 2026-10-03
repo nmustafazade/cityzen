@@ -53,6 +53,7 @@ npm run dev
 Keep migration history. Do not reset a database containing data you need.
 
 Health checks:
+
 - `http://localhost:5051/api/health`
 - `http://localhost:5051/api/health/database`
 
@@ -77,6 +78,7 @@ npm start
 ```
 
 Set `EXPO_PUBLIC_API_URL` to the backend address reachable from the device:
+
 - Physical phone: your computer's current LAN IP, with port `5051`; use the same Wi-Fi.
 - iOS Simulator: `http://localhost:5051`.
 - Android emulator: `http://10.0.2.2:5051`.
@@ -100,6 +102,7 @@ Create departments first. Seeds reuse existing records; they do not reset the da
 The demo seed creates `demo.citizen@cityzen.test` with `Password123` if that account does not exist. It does not reset an existing account's password. Never use demo credentials in production.
 
 Uploads live in `server/uploads/` and are ignored by Git:
+
 - Report photos: JPEG/PNG/WebP, up to five files, 5 MB each.
 - Service documents: PDF/JPEG/PNG/WebP, served through authorized API access, not public static URLs.
 

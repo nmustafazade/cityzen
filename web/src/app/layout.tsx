@@ -11,13 +11,23 @@ export const metadata: Metadata = {
   description: "Smart City Citizen & Municipality Platform",
 };
 
-const manrope=Manrope({subsets:["latin"],variable:"--font-manrope",display:"swap"});
+const manrope = Manrope({
+  subsets: ["latin"],
+  variable: "--font-manrope",
+  display: "swap",
+});
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${manrope.variable} h-full antialiased`}>
       <body className="min-h-full">
-        <Suspense fallback={<p role="status" className="p-8">Loading Cityzen…</p>}>
+        <Suspense
+          fallback={
+            <p role="status" className="p-8">
+              Loading Cityzen…
+            </p>
+          }
+        >
           <AuthProvider>
             <NotificationProvider>
               <AppShell>{children}</AppShell>

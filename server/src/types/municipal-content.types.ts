@@ -1,4 +1,37 @@
-export interface PageFilters { page: number; limit: number; departmentId?: number; }
-export interface ServiceInput { departmentId?: number; title: string; description: string; instructions?: string | null; requirements?: string | null; contactPhone?: string | null; contactEmail?: string | null; externalUrl?: string | null; address?: string | null; isActive?: boolean; }
-export interface AnnouncementInput { departmentId?: number | null; title: string; content: string; expiresAt?: Date | null; isPublished?: boolean; }
-export interface EventInput { departmentId?: number | null; title: string; description: string; locationName?: string | null; address?: string | null; latitude?: number | null; longitude?: number | null; startsAt: Date; endsAt?: Date | null; externalUrl?: string | null; isPublished?: boolean; }
+export interface PageFilters {
+  page: number;
+  limit: number;
+  departmentId?: number;
+}
+export interface ServiceInput {
+  departmentId?: number;
+  title: string;
+  description: string;
+  instructions?: string | null;
+  requirements?: string | null;
+  contactPhone?: string | null;
+  contactEmail?: string | null;
+  externalUrl?: string | null;
+  address?: string | null;
+  isActive?: boolean;
+}
+export interface AnnouncementInput {
+  departmentId?: number | null;
+  title: string;
+  content: string;
+  expiresAt?: Date | null;
+  isPublished?: boolean;
+}
+export interface EventInput {
+  departmentId?: number | null;
+  title: string;
+  description: string;
+  locationName?: string | null;
+  address?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  startsAt: Date;
+  endsAt?: Date | null;
+  externalUrl?: string | null;
+  isPublished?: boolean;
+}

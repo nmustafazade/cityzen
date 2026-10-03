@@ -25,13 +25,27 @@ type AcceptedMimeType = keyof typeof extensionByMimeType;
 function hasExpectedSignature(file: Express.Multer.File): boolean {
   const bytes = file.buffer;
   if (file.mimetype === "image/jpeg") {
-    return bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+    return (
+      bytes.length >= 3 &&
+      bytes[0] === 0xff &&
+      bytes[1] === 0xd8 &&
+      bytes[2] === 0xff
+    );
   }
   if (file.mimetype === "image/png") {
-    return bytes.length >= 8 && bytes.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+    return (
+      bytes.length >= 8 &&
+      bytes
+        .subarray(0, 8)
+        .equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))
+    );
   }
   if (file.mimetype === "image/webp") {
-    return bytes.length >= 12 && bytes.toString("ascii", 0, 4) === "RIFF" && bytes.toString("ascii", 8, 12) === "WEBP";
+    return (
+      bytes.length >= 12 &&
+      bytes.toString("ascii", 0, 4) === "RIFF" &&
+      bytes.toString("ascii", 8, 12) === "WEBP"
+    );
   }
   return false;
 }
@@ -61,18 +75,30 @@ export async function addReportImages(
 
   if (!report) throw new AppError(404, "Report not found");
   if (report.citizenId !== citizenId) {
-    throw new AppError(403, "You do not have permission to add images to this report");
+    throw new AppError(
+      403,
+      "You do not have permission to add images to this report",
+    );
   }
   if (!uploadableStatuses.includes(report.status)) {
     throw new AppError(409, "Images can no longer be added to this report");
   }
   if (report._count.images + files.length > MAX_REPORT_IMAGES) {
-    throw new AppError(400, `A report can have at most ${MAX_REPORT_IMAGES} images`);
+    throw new AppError(
+      400,
+      `A report can have at most ${MAX_REPORT_IMAGES} images`,
+    );
   }
 
   for (const file of files) {
-    if (!(file.mimetype in extensionByMimeType) || !hasExpectedSignature(file)) {
-      throw new AppError(400, "One or more files are not valid JPEG, PNG, or WebP images");
+    if (
+      !(file.mimetype in extensionByMimeType) ||
+      !hasExpectedSignature(file)
+    ) {
+      throw new AppError(
+        400,
+        "One or more files are not valid JPEG, PNG, or WebP images",
+      );
     }
   }
 
@@ -88,7 +114,9 @@ export async function addReportImages(
   });
 
   const writeResults = await Promise.allSettled(
-    storedFiles.map((file) => writeFile(file.diskPath, file.buffer, { flag: "wx" })),
+    storedFiles.map((file) =>
+      writeFile(file.diskPath, file.buffer, { flag: "wx" }),
+    ),
   );
   if (writeResults.some((result) => result.status === "rejected")) {
     await removeFiles(storedFiles.map((file) => file.diskPath));
@@ -97,9 +125,11 @@ export async function addReportImages(
 
   try {
     return await database.$transaction(
-      storedFiles.map((file) => database.reportImage.create({
-        data: { reportId, imageUrl: file.imageUrl },
-      })),
+      storedFiles.map((file) =>
+        database.reportImage.create({
+          data: { reportId, imageUrl: file.imageUrl },
+        }),
+      ),
     );
   } catch (error) {
     await removeFiles(storedFiles.map((file) => file.diskPath));

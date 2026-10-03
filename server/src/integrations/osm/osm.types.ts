@@ -7,6 +7,18 @@ export interface OsmElement {
   tags?: Record<string, string>;
 }
 
-export interface OverpassResponse { elements: OsmElement[]; }
-export interface ImportBounds { south: number; west: number; north: number; east: number; }
-export interface ImportStats { fetched: number; created: number; updated: number; skipped: number; }
+export interface OverpassResponse {
+  elements: OsmElement[];
+}
+export interface ImportBounds {
+  south: number;
+  west: number;
+  north: number;
+  east: number;
+}
+export interface ImportStats {
+  fetched: number;
+  created: number;
+  updated: number;
+  skipped: number;
+}

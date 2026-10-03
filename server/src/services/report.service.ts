@@ -51,7 +51,11 @@ const reportDetailInclude = {
 } as const;
 
 function statusLabel(status: ReportStatus) {
-  return status.toLowerCase().split("_").map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(" ");
+  return status
+    .toLowerCase()
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
 }
 
 function paginationMeta(total: number, page: number, limit: number) {
@@ -72,7 +76,7 @@ export async function createReport(
       where: { id: input.categoryId, isActive: true },
       select: {
         id: true,
-        allowsPublicSharing:true,
+        allowsPublicSharing: true,
         department: {
           select: {
             id: true,
@@ -91,9 +95,13 @@ export async function createReport(
       throw new AppError(400, "Report category does not exist or is inactive");
     }
     if (!category.department?.isActive) {
-      throw new AppError(409, "This report category is not assigned to an active department");
+      throw new AppError(
+        409,
+        "This report category is not assigned to an active department",
+      );
     }
-    if(input.isPublic&&!category.allowsPublicSharing)throw new AppError(409,"This category does not allow public sharing");
+    if (input.isPublic && !category.allowsPublicSharing)
+      throw new AppError(409, "This category does not allow public sharing");
 
     const report = await transaction.report.create({
       data: {
@@ -105,7 +113,7 @@ export async function createReport(
         addressText: input.addressText?.trim() || undefined,
         latitude: input.latitude,
         longitude: input.longitude,
-        isPublic:input.isPublic??false,
+        isPublic: input.isPublic ?? false,
         images: input.imageUrls?.length
           ? { create: input.imageUrls.map((imageUrl) => ({ imageUrl })) }
           : undefined,
@@ -123,14 +131,17 @@ export async function createReport(
     });
 
     for (const head of category.department.employees) {
-      await createNotification({
-        userId: head.id,
-        actorId: citizenId,
-        reportId: report.id,
-        type: NotificationType.REPORT_CREATED,
-        title: "New department report",
-        message: `A new report #${report.id}, "${report.title}", was submitted to ${category.department.name}.`,
-      }, transaction);
+      await createNotification(
+        {
+          userId: head.id,
+          actorId: citizenId,
+          reportId: report.id,
+          type: NotificationType.REPORT_CREATED,
+          title: "New department report",
+          message: `A new report #${report.id}, "${report.title}", was submitted to ${category.department.name}.`,
+        },
+        transaction,
+      );
     }
 
     return transaction.report.findUniqueOrThrow({
@@ -162,13 +173,27 @@ export async function listMyReports(
     database.report.count({ where }),
   ]);
 
-  return { reports, pagination: paginationMeta(total, filters.page, filters.limit) };
+  return {
+    reports,
+    pagination: paginationMeta(total, filters.page, filters.limit),
+  };
 }
 
-function staffReportScope(authenticatedUser: AuthenticatedUser): Prisma.ReportWhereInput {
+function staffReportScope(
+  authenticatedUser: AuthenticatedUser,
+): Prisma.ReportWhereInput {
   if (authenticatedUser.role === UserRole.ADMIN) return {};
   if (authenticatedUser.role === UserRole.DEPARTMENT_HEAD) {
-    return { department: { employees: { some: { id: authenticatedUser.userId, role: UserRole.DEPARTMENT_HEAD } } } };
+    return {
+      department: {
+        employees: {
+          some: {
+            id: authenticatedUser.userId,
+            role: UserRole.DEPARTMENT_HEAD,
+          },
+        },
+      },
+    };
   }
   if (authenticatedUser.role === UserRole.EMPLOYEE) {
     return { assignedEmployeeId: authenticatedUser.userId };
@@ -217,7 +242,10 @@ export async function cancelReport(reportId: number, citizenId: number) {
     }
 
     if (report.citizenId !== citizenId) {
-      throw new AppError(403, "You do not have permission to cancel this report");
+      throw new AppError(
+        403,
+        "You do not have permission to cancel this report",
+      );
     }
 
     const cancellableStatuses: ReportStatus[] = [
@@ -250,7 +278,10 @@ export async function cancelReport(reportId: number, citizenId: number) {
   });
 }
 
-export async function listReports(authenticatedUser: AuthenticatedUser, filters: ManageReportFilters) {
+export async function listReports(
+  authenticatedUser: AuthenticatedUser,
+  filters: ManageReportFilters,
+) {
   const where: Prisma.ReportWhereInput = {
     AND: [
       staffReportScope(authenticatedUser),
@@ -283,7 +314,10 @@ export async function listReports(authenticatedUser: AuthenticatedUser, filters:
     database.report.count({ where }),
   ]);
 
-  return { reports, pagination: paginationMeta(total, filters.page, filters.limit) };
+  return {
+    reports,
+    pagination: paginationMeta(total, filters.page, filters.limit),
+  };
 }
 
 export async function changeReportStatus(
@@ -324,16 +358,21 @@ export async function changeReportStatus(
     });
 
     const resolved = input.status === ReportStatus.RESOLVED;
-    await createNotification({
-      userId: report.citizenId,
-      actorId: authenticatedUser.userId,
-      reportId: report.id,
-      type: resolved ? NotificationType.REPORT_RESOLVED : NotificationType.REPORT_STATUS_CHANGED,
-      title: resolved ? "Report resolved" : "Report status updated",
-      message: resolved
-        ? `Your report "${report.title}" has been resolved.`
-        : `Your report "${report.title}" is now ${statusLabel(input.status)}.`,
-    }, transaction);
+    await createNotification(
+      {
+        userId: report.citizenId,
+        actorId: authenticatedUser.userId,
+        reportId: report.id,
+        type: resolved
+          ? NotificationType.REPORT_RESOLVED
+          : NotificationType.REPORT_STATUS_CHANGED,
+        title: resolved ? "Report resolved" : "Report status updated",
+        message: resolved
+          ? `Your report "${report.title}" has been resolved.`
+          : `Your report "${report.title}" is now ${statusLabel(input.status)}.`,
+      },
+      transaction,
+    );
 
     return transaction.report.findUniqueOrThrow({
       where: { id: report.id },
@@ -355,17 +394,36 @@ export async function assignReport(
     if (!actor) throw new AppError(401, "Authentication required");
     const report = await transaction.report.findUnique({
       where: { id: reportId },
-      select: { id: true, status: true, title: true, citizenId: true, departmentId: true },
+      select: {
+        id: true,
+        status: true,
+        title: true,
+        citizenId: true,
+        departmentId: true,
+      },
     });
 
     if (!report) {
       throw new AppError(404, "Report not found");
     }
-    if (actor.role === UserRole.DEPARTMENT_HEAD && (!actor.departmentId || report.departmentId !== actor.departmentId)) {
-      throw new AppError(403, "Department heads may assign only reports in their department");
+    if (
+      actor.role === UserRole.DEPARTMENT_HEAD &&
+      (!actor.departmentId || report.departmentId !== actor.departmentId)
+    ) {
+      throw new AppError(
+        403,
+        "Department heads may assign only reports in their department",
+      );
     }
-    if (actor.role === UserRole.DEPARTMENT_HEAD && input.departmentId && input.departmentId !== actor.departmentId) {
-      throw new AppError(403, "Department heads cannot move reports to another department");
+    if (
+      actor.role === UserRole.DEPARTMENT_HEAD &&
+      input.departmentId &&
+      input.departmentId !== actor.departmentId
+    ) {
+      throw new AppError(
+        403,
+        "Department heads cannot move reports to another department",
+      );
     }
 
     const department = input.departmentId
@@ -391,15 +449,31 @@ export async function assignReport(
       : null;
 
     if (input.employeeId && !employee) {
-      throw new AppError(400, "Employee does not exist or cannot receive assignments");
+      throw new AppError(
+        400,
+        "Employee does not exist or cannot receive assignments",
+      );
     }
 
-    if (actor.role === UserRole.DEPARTMENT_HEAD && employee?.departmentId !== actor.departmentId) {
-      throw new AppError(403, "Department heads may assign only employees in their department");
+    if (
+      actor.role === UserRole.DEPARTMENT_HEAD &&
+      employee?.departmentId !== actor.departmentId
+    ) {
+      throw new AppError(
+        403,
+        "Department heads may assign only employees in their department",
+      );
     }
 
-    if (employee && input.departmentId && employee.departmentId !== input.departmentId) {
-      throw new AppError(400, "Employee does not belong to the selected department");
+    if (
+      employee &&
+      input.departmentId &&
+      employee.departmentId !== input.departmentId
+    ) {
+      throw new AppError(
+        400,
+        "Employee does not belong to the selected department",
+      );
     }
 
     const departmentId = input.departmentId ?? employee?.departmentId;
@@ -430,24 +504,30 @@ export async function assignReport(
       });
     }
 
-    await createNotification({
-      userId: report.citizenId,
-      actorId: authenticatedUser.userId,
-      reportId: report.id,
-      type: NotificationType.REPORT_ASSIGNED,
-      title: "Report assigned",
-      message: `Your report "${report.title}" has been assigned${department?.name ? ` to ${department.name}` : ""}.`,
-    }, transaction);
-
-    if (employee) {
-      await createNotification({
-        userId: employee.id,
+    await createNotification(
+      {
+        userId: report.citizenId,
         actorId: authenticatedUser.userId,
         reportId: report.id,
         type: NotificationType.REPORT_ASSIGNED,
-        title: "Report assigned to you",
-        message: `You have been assigned report #${report.id}: "${report.title}".`,
-      }, transaction);
+        title: "Report assigned",
+        message: `Your report "${report.title}" has been assigned${department?.name ? ` to ${department.name}` : ""}.`,
+      },
+      transaction,
+    );
+
+    if (employee) {
+      await createNotification(
+        {
+          userId: employee.id,
+          actorId: authenticatedUser.userId,
+          reportId: report.id,
+          type: NotificationType.REPORT_ASSIGNED,
+          title: "Report assigned to you",
+          message: `You have been assigned report #${report.id}: "${report.title}".`,
+        },
+        transaction,
+      );
     }
 
     return transaction.report.findUniqueOrThrow({

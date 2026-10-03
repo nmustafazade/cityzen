@@ -29,7 +29,9 @@ export async function getMyReports(params: MyReportsParams = {}) {
   if (params.limit) query.set("limit", String(params.limit));
 
   const search = query.toString();
-  return apiRequest<MyReportsResponse>(`/api/reports/my${search ? `?${search}` : ""}`);
+  return apiRequest<MyReportsResponse>(
+    `/api/reports/my${search ? `?${search}` : ""}`,
+  );
 }
 
 export async function getReport(id: number) {
@@ -78,7 +80,9 @@ export async function getReports(params: ManageReportsParams = {}) {
   });
 
   const search = query.toString();
-  return apiRequest<MyReportsResponse>(`/api/reports${search ? `?${search}` : ""}`);
+  return apiRequest<MyReportsResponse>(
+    `/api/reports${search ? `?${search}` : ""}`,
+  );
 }
 
 export async function assignReport(id: number, data: AssignReportData) {
@@ -99,36 +103,61 @@ export async function updateReportStatus(
 }
 
 export function getReportComments(reportId: number) {
-  return apiRequest<ReportCommentsResponse>(`/api/reports/${reportId}/comments`);
+  return apiRequest<ReportCommentsResponse>(
+    `/api/reports/${reportId}/comments`,
+  );
 }
 
-export function createReportComment(reportId: number, content: string, parentCommentId?: number) {
-  return apiRequest<{ comment: ReportComment }>(`/api/reports/${reportId}/comments`, {
-    method: "POST",
-    body: { content, parentCommentId },
-  });
+export function createReportComment(
+  reportId: number,
+  content: string,
+  parentCommentId?: number,
+) {
+  return apiRequest<{ comment: ReportComment }>(
+    `/api/reports/${reportId}/comments`,
+    {
+      method: "POST",
+      body: { content, parentCommentId },
+    },
+  );
 }
 
 export function deleteReportComment(reportId: number, commentId: number) {
-  return apiRequest<{ status: "ok"; message: string }>(`/api/reports/${reportId}/comments/${commentId}`, {
-    method: "DELETE",
-  });
+  return apiRequest<{ status: "ok"; message: string }>(
+    `/api/reports/${reportId}/comments/${commentId}`,
+    {
+      method: "DELETE",
+    },
+  );
 }
 
 export function toggleReportUpvote(reportId: number) {
-  return apiRequest<{ upvoted: boolean; upvoteCount: number }>(`/api/reports/${reportId}/upvote`, {
-    method: "POST",
+  return apiRequest<{ upvoted: boolean; upvoteCount: number }>(
+    `/api/reports/${reportId}/upvote`,
+    {
+      method: "POST",
+    },
+  );
+}
+export function setReportVisibility(reportId: number, isPublic: boolean) {
+  return apiRequest<ReportResponse>(`/api/reports/${reportId}/visibility`, {
+    method: "PATCH",
+    body: { isPublic },
   });
 }
-export function setReportVisibility(reportId:number,isPublic:boolean){return apiRequest<ReportResponse>(`/api/reports/${reportId}/visibility`,{method:"PATCH",body:{isPublic}})}
 
 export function getReportFeedback(reportId: number) {
-  return apiRequest<ReportFeedbackResponse>(`/api/reports/${reportId}/feedback`);
+  return apiRequest<ReportFeedbackResponse>(
+    `/api/reports/${reportId}/feedback`,
+  );
 }
 
 export function saveReportFeedback(reportId: number, data: FeedbackInput) {
-  return apiRequest<{ feedback: ReportFeedback }>(`/api/reports/${reportId}/feedback`, {
-    method: "PUT",
-    body: data,
-  });
+  return apiRequest<{ feedback: ReportFeedback }>(
+    `/api/reports/${reportId}/feedback`,
+    {
+      method: "PUT",
+      body: data,
+    },
+  );
 }

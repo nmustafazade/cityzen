@@ -1,6 +1,14 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 
 import { useAuth } from "@/context/AuthContext";
 import { getUnreadNotificationCount } from "@/lib/notifications";
@@ -10,10 +18,12 @@ interface NotificationContextValue {
   refreshUnreadCount: () => Promise<void>;
 }
 
-const NotificationContext = createContext<NotificationContextValue | undefined>(undefined);
+const NotificationContext = createContext<NotificationContextValue | undefined>(
+  undefined,
+);
 
 export function NotificationProvider({ children }: { children: ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
 
   const refreshUnreadCount = useCallback(async () => {
@@ -34,15 +44,35 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const initialRefresh = window.setTimeout(() => void refreshUnreadCount(), 0);
+    let active = true;
+    let pending = false;
+    const refresh = async () => {
+      if (pending || document.visibilityState !== "visible") return;
+      pending = true;
+      try {
+        const response = await getUnreadNotificationCount();
+        if (active) setUnreadCount(response.count);
+      } catch {
+        // Retry on the next poll or when the user returns to this tab.
+      } finally {
+        pending = false;
+      }
+    };
+    const onVisible = () => void refresh();
+    const initialRefresh = window.setTimeout(() => void refresh(), 0);
     const interval = window.setInterval(() => {
-      if (document.visibilityState === "visible") void refreshUnreadCount();
+      void refresh();
     }, 30_000);
+    window.addEventListener("focus", onVisible);
+    document.addEventListener("visibilitychange", onVisible);
     return () => {
+      active = false;
       window.clearTimeout(initialRefresh);
       window.clearInterval(interval);
+      window.removeEventListener("focus", onVisible);
+      document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [isAuthenticated, isLoading, refreshUnreadCount]);
+  }, [isAuthenticated, isLoading, user?.id]);
 
   const visibleUnreadCount = isAuthenticated ? unreadCount : 0;
   const value = useMemo(
@@ -50,11 +80,18 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     [refreshUnreadCount, visibleUnreadCount],
   );
 
-  return <NotificationContext.Provider value={value}>{children}</NotificationContext.Provider>;
+  return (
+    <NotificationContext.Provider value={value}>
+      {children}
+    </NotificationContext.Provider>
+  );
 }
 
 export function useNotifications() {
   const context = useContext(NotificationContext);
-  if (!context) throw new Error("useNotifications must be used within NotificationProvider");
+  if (!context)
+    throw new Error(
+      "useNotifications must be used within NotificationProvider",
+    );
   return context;
 }

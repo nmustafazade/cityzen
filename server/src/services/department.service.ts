@@ -18,7 +18,9 @@ export async function listManagementDepartments(headUserId?: number) {
   return database.department.findMany({
     where: {
       isActive: true,
-      employees: headUserId ? { some: { id: headUserId, role: UserRole.DEPARTMENT_HEAD } } : undefined,
+      employees: headUserId
+        ? { some: { id: headUserId, role: UserRole.DEPARTMENT_HEAD } }
+        : undefined,
     },
     select: {
       id: true,
@@ -43,7 +45,8 @@ async function ensureUniqueDepartmentName(name: string, excludeId?: number) {
     where: { name, id: excludeId ? { not: excludeId } : undefined },
     select: { id: true },
   });
-  if (existing) throw new AppError(409, "A department with this name already exists");
+  if (existing)
+    throw new AppError(409, "A department with this name already exists");
 }
 
 export async function createDepartment(input: DepartmentInput) {
@@ -56,7 +59,10 @@ export async function createDepartment(input: DepartmentInput) {
 }
 
 export async function updateDepartment(id: number, input: DepartmentUpdate) {
-  const current = await database.department.findUnique({ where: { id }, select: { id: true } });
+  const current = await database.department.findUnique({
+    where: { id },
+    select: { id: true },
+  });
   if (!current) throw new AppError(404, "Department not found");
   const name = input.name?.trim();
   if (name) await ensureUniqueDepartmentName(name, id);
@@ -64,7 +70,10 @@ export async function updateDepartment(id: number, input: DepartmentUpdate) {
     where: { id },
     data: {
       name,
-      description: input.description === undefined ? undefined : input.description?.trim() || null,
+      description:
+        input.description === undefined
+          ? undefined
+          : input.description?.trim() || null,
       isActive: input.isActive,
     },
     select: departmentSelect,

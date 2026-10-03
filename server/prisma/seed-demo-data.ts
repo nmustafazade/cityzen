@@ -1,39 +1,705 @@
 import bcrypt from "bcrypt";
-import { EnvironmentalMetric, EmergencyAlertSeverity, EmergencyAlertType, InfrastructureDataSource, ParkingFacilityType, ReportPriority, ReportStatus, RoadEventSeverity, RoadEventStatus, RoadEventType, ServiceFieldType, ServiceRequestStatus, UserRole, WasteFacilityType, WasteType, Weekday, PrismaClient } from "@prisma/client";
+import {
+  EnvironmentalMetric,
+  EmergencyAlertSeverity,
+  EmergencyAlertType,
+  InfrastructureDataSource,
+  ParkingFacilityType,
+  ReportPriority,
+  ReportStatus,
+  RoadEventSeverity,
+  RoadEventStatus,
+  RoadEventType,
+  ServiceFieldType,
+  ServiceRequestStatus,
+  UserRole,
+  WasteFacilityType,
+  WasteType,
+  Weekday,
+  PrismaClient,
+} from "@prisma/client";
 
-const db=new PrismaClient();
-const now=new Date(),days=(count:number)=>new Date(now.getTime()+count*86400000),hours=(count:number)=>new Date(now.getTime()+count*3600000);
-async function main(){
-  const departments=await db.department.findMany({where:{isActive:true},include:{employees:true}});if(!departments.length)throw new Error("Create departments before running demo seed");
-  const admin=await db.user.findFirst({where:{role:UserRole.ADMIN,isActive:true}});if(!admin)throw new Error("An active admin is required");
-  const citizen=await db.user.upsert({where:{email:"demo.citizen@cityzen.test"},update:{isActive:true},create:{firstName:"Demo",lastName:"Citizen",email:"demo.citizen@cityzen.test",passwordHash:await bcrypt.hash("Password123",10),role:UserRole.CITIZEN,isEmailVerified:true,phone:"+994 50 555 0100"}});
-  const publicWorks=departments.find(d=>d.name==="Public Works")??departments[0],wasteDepartment=departments.find(d=>/waste|sanitation/i.test(d.name))??departments[0],environmentDepartment=departments.find(d=>/environment/i.test(d.name))??departments[0],safetyDepartment=departments.find(d=>/safety/i.test(d.name))??departments[0];
-  const head=(departmentId:number)=>departments.find(d=>d.id===departmentId)?.employees.find(e=>e.role===UserRole.DEPARTMENT_HEAD&&e.isActive)??admin;
-  const employee=(departmentId:number)=>departments.find(d=>d.id===departmentId)?.employees.find(e=>e.role===UserRole.EMPLOYEE&&e.isActive)??null;
+const db = new PrismaClient();
+const now = new Date(),
+  days = (count: number) => new Date(now.getTime() + count * 86400000),
+  hours = (count: number) => new Date(now.getTime() + count * 3600000);
+async function main() {
+  const departments = await db.department.findMany({
+    where: { isActive: true },
+    include: { employees: true },
+  });
+  if (!departments.length)
+    throw new Error("Create departments before running demo seed");
+  const admin = await db.user.findFirst({
+    where: { role: UserRole.ADMIN, isActive: true },
+  });
+  if (!admin) throw new Error("An active admin is required");
+  const citizen = await db.user.upsert({
+    where: { email: "demo.citizen@cityzen.test" },
+    update: { isActive: true },
+    create: {
+      firstName: "Demo",
+      lastName: "Citizen",
+      email: "demo.citizen@cityzen.test",
+      passwordHash: await bcrypt.hash("Password123", 10),
+      role: UserRole.CITIZEN,
+      isEmailVerified: true,
+      phone: "+994 50 555 0100",
+    },
+  });
+  const publicWorks =
+      departments.find((d) => d.name === "Public Works") ?? departments[0],
+    wasteDepartment =
+      departments.find((d) => /waste|sanitation/i.test(d.name)) ??
+      departments[0],
+    environmentDepartment =
+      departments.find((d) => /environment/i.test(d.name)) ?? departments[0],
+    safetyDepartment =
+      departments.find((d) => /safety/i.test(d.name)) ?? departments[0];
+  const head = (departmentId: number) =>
+    departments
+      .find((d) => d.id === departmentId)
+      ?.employees.find(
+        (e) => e.role === UserRole.DEPARTMENT_HEAD && e.isActive,
+      ) ?? admin;
+  const employee = (departmentId: number) =>
+    departments
+      .find((d) => d.id === departmentId)
+      ?.employees.find((e) => e.role === UserRole.EMPLOYEE && e.isActive) ??
+    null;
 
-  const categoryNames=["Street Lighting","Road Damage","Waste and Recycling","Parks and Trees","Water and Drainage","Public Safety","Building Safety","Environmental Concern"];
-  for(const[name,index]of categoryNames.map((name,index)=>[name,index]as const)){const department=departments[index%departments.length];await db.reportCategory.upsert({where:{name},update:{isActive:true,departmentId:department.id,allowsPublicSharing:true},create:{name,description:`Demo category for ${name.toLowerCase()} issues.`,isActive:true,departmentId:department.id,allowsPublicSharing:true}})}
-  const categories=await db.reportCategory.findMany({where:{isActive:true,departmentId:{not:null}},take:8});
-  const reportSamples=[
-    ["Broken streetlight near the park","The streetlight has been dark for several nights and the path is difficult to see.",ReportStatus.IN_PROGRESS,ReportPriority.HIGH,true,40.4093,49.8671],
-    ["Pothole on central avenue","A deep pothole is slowing traffic near the pedestrian crossing.",ReportStatus.ASSIGNED,ReportPriority.MEDIUM,true,40.4058,49.8629],
-    ["Overflowing recycling containers","The recycling containers are full and need collection.",ReportStatus.SUBMITTED,ReportPriority.MEDIUM,true,40.4121,49.8732],
-    ["Damaged playground bench","A bench beside the playground has a broken wooden panel.",ReportStatus.UNDER_REVIEW,ReportPriority.LOW,true,40.4075,49.8578],
-    ["Private drainage concern","Water gathers beside the entrance after rain.",ReportStatus.SUBMITTED,ReportPriority.MEDIUM,false,40.4012,49.8701],
-    ["Resolved sidewalk obstruction","The obstruction was removed and the sidewalk is open again.",ReportStatus.RESOLVED,ReportPriority.MEDIUM,true,40.4142,49.8654],
-  ]as const;
-  for(let index=0;index<reportSamples.length;index++){const[title,description,status,priority,isPublic,latitude,longitude]=reportSamples[index],category=categories[index%categories.length];if(!category?.departmentId)continue;let report=await db.report.findFirst({where:{title,citizenId:citizen.id}});const assigned=employee(category.departmentId);if(!report)report=await db.report.create({data:{title,description,status,priority,isPublic,addressText:`Demo district location ${index+1}`,latitude,longitude,citizenId:citizen.id,categoryId:category.id,departmentId:category.departmentId,assignedEmployeeId:[ReportStatus.ASSIGNED,ReportStatus.IN_PROGRESS,ReportStatus.RESOLVED].includes(status)?assigned?.id:null,resolvedAt:status===ReportStatus.RESOLVED?now:null}});await db.reportStatusHistory.upsert({where:{id:(await db.reportStatusHistory.findFirst({where:{reportId:report.id,oldStatus:null}}))?.id??-1},update:{},create:{reportId:report.id,oldStatus:null,newStatus:ReportStatus.SUBMITTED,changedById:citizen.id}});if(status!==ReportStatus.SUBMITTED&&!await db.reportStatusHistory.findFirst({where:{reportId:report.id,newStatus:status}}))await db.reportStatusHistory.create({data:{reportId:report.id,oldStatus:ReportStatus.SUBMITTED,newStatus:status,changedById:head(category.departmentId).id,note:`Demo workflow moved this issue to ${status.toLowerCase().replaceAll("_"," ")}.`}});if(isPublic&&!await db.reportComment.findFirst({where:{reportId:report.id,content:"Thank you for reporting this issue. The municipality team is reviewing it."}}))await db.reportComment.create({data:{reportId:report.id,userId:head(category.departmentId).id,content:"Thank you for reporting this issue. The municipality team is reviewing it."}})}
+  const categoryNames = [
+    "Street Lighting",
+    "Road Damage",
+    "Waste and Recycling",
+    "Parks and Trees",
+    "Water and Drainage",
+    "Public Safety",
+    "Building Safety",
+    "Environmental Concern",
+  ];
+  for (const [name, index] of categoryNames.map(
+    (name, index) => [name, index] as const,
+  )) {
+    const department = departments[index % departments.length];
+    await db.reportCategory.upsert({
+      where: { name },
+      update: {
+        isActive: true,
+        departmentId: department.id,
+        allowsPublicSharing: true,
+      },
+      create: {
+        name,
+        description: `Demo category for ${name.toLowerCase()} issues.`,
+        isActive: true,
+        departmentId: department.id,
+        allowsPublicSharing: true,
+      },
+    });
+  }
+  const categories = await db.reportCategory.findMany({
+    where: { isActive: true, departmentId: { not: null } },
+    take: 8,
+  });
+  const reportSamples = [
+    [
+      "Broken streetlight near the park",
+      "The streetlight has been dark for several nights and the path is difficult to see.",
+      ReportStatus.IN_PROGRESS,
+      ReportPriority.HIGH,
+      true,
+      40.4093,
+      49.8671,
+    ],
+    [
+      "Pothole on central avenue",
+      "A deep pothole is slowing traffic near the pedestrian crossing.",
+      ReportStatus.ASSIGNED,
+      ReportPriority.MEDIUM,
+      true,
+      40.4058,
+      49.8629,
+    ],
+    [
+      "Overflowing recycling containers",
+      "The recycling containers are full and need collection.",
+      ReportStatus.SUBMITTED,
+      ReportPriority.MEDIUM,
+      true,
+      40.4121,
+      49.8732,
+    ],
+    [
+      "Damaged playground bench",
+      "A bench beside the playground has a broken wooden panel.",
+      ReportStatus.UNDER_REVIEW,
+      ReportPriority.LOW,
+      true,
+      40.4075,
+      49.8578,
+    ],
+    [
+      "Private drainage concern",
+      "Water gathers beside the entrance after rain.",
+      ReportStatus.SUBMITTED,
+      ReportPriority.MEDIUM,
+      false,
+      40.4012,
+      49.8701,
+    ],
+    [
+      "Resolved sidewalk obstruction",
+      "The obstruction was removed and the sidewalk is open again.",
+      ReportStatus.RESOLVED,
+      ReportPriority.MEDIUM,
+      true,
+      40.4142,
+      49.8654,
+    ],
+  ] as const;
+  for (let index = 0; index < reportSamples.length; index++) {
+    const [
+        title,
+        description,
+        status,
+        priority,
+        isPublic,
+        latitude,
+        longitude,
+      ] = reportSamples[index],
+      category = categories[index % categories.length];
+    if (!category?.departmentId) continue;
+    let report = await db.report.findFirst({
+      where: { title, citizenId: citizen.id },
+    });
+    const assigned = employee(category.departmentId);
+    if (!report)
+      report = await db.report.create({
+        data: {
+          title,
+          description,
+          status,
+          priority,
+          isPublic,
+          addressText: `Demo district location ${index + 1}`,
+          latitude,
+          longitude,
+          citizenId: citizen.id,
+          categoryId: category.id,
+          departmentId: category.departmentId,
+          assignedEmployeeId: [
+            ReportStatus.ASSIGNED,
+            ReportStatus.IN_PROGRESS,
+            ReportStatus.RESOLVED,
+          ].includes(status)
+            ? assigned?.id
+            : null,
+          resolvedAt: status === ReportStatus.RESOLVED ? now : null,
+        },
+      });
+    await db.reportStatusHistory.upsert({
+      where: {
+        id:
+          (
+            await db.reportStatusHistory.findFirst({
+              where: { reportId: report.id, oldStatus: null },
+            })
+          )?.id ?? -1,
+      },
+      update: {},
+      create: {
+        reportId: report.id,
+        oldStatus: null,
+        newStatus: ReportStatus.SUBMITTED,
+        changedById: citizen.id,
+      },
+    });
+    if (
+      status !== ReportStatus.SUBMITTED &&
+      !(await db.reportStatusHistory.findFirst({
+        where: { reportId: report.id, newStatus: status },
+      }))
+    )
+      await db.reportStatusHistory.create({
+        data: {
+          reportId: report.id,
+          oldStatus: ReportStatus.SUBMITTED,
+          newStatus: status,
+          changedById: head(category.departmentId).id,
+          note: `Demo workflow moved this issue to ${status.toLowerCase().replaceAll("_", " ")}.`,
+        },
+      });
+    if (
+      isPublic &&
+      !(await db.reportComment.findFirst({
+        where: {
+          reportId: report.id,
+          content:
+            "Thank you for reporting this issue. The municipality team is reviewing it.",
+        },
+      }))
+    )
+      await db.reportComment.create({
+        data: {
+          reportId: report.id,
+          userId: head(category.departmentId).id,
+          content:
+            "Thank you for reporting this issue. The municipality team is reviewing it.",
+        },
+      });
+  }
 
-  for(const department of departments){let service=await db.municipalService.findFirst({where:{departmentId:department.id}});if(!service)service=await db.municipalService.create({data:{departmentId:department.id,title:`${department.name} Assistance`,description:`Request help directly from the ${department.name} department.`,instructions:"Describe your request and choose an available appointment if needed.",isActive:true}});await db.municipalService.update({where:{id:service.id},data:{allowsDocuments:true,maxDocuments:3,supportsAppointments:true}});const topic=await db.municipalServiceField.upsert({where:{serviceId_fieldKey:{serviceId:service.id,fieldKey:"request_topic"}},update:{isActive:true},create:{serviceId:service.id,label:"Request Topic",fieldKey:"request_topic",type:ServiceFieldType.SELECT,isRequired:true,options:[{value:"information",label:"Information"},{value:"appointment",label:"Appointment"},{value:"assistance",label:"Assistance"}],sortOrder:0}});await db.municipalServiceField.upsert({where:{serviceId_fieldKey:{serviceId:service.id,fieldKey:"additional_details"}},update:{isActive:true},create:{serviceId:service.id,label:"Additional Details",fieldKey:"additional_details",type:ServiceFieldType.TEXTAREA,maxLength:500,sortOrder:1}});let slot=await db.serviceAppointmentSlot.findFirst({where:{serviceId:service.id,startsAt:{gt:now}}});if(!slot)slot=await db.serviceAppointmentSlot.create({data:{serviceId:service.id,departmentId:department.id,startsAt:days(7),endsAt:new Date(days(7).getTime()+30*60000),capacity:4}});if(department.id===publicWorks.id){let request=await db.serviceRequest.findFirst({where:{serviceId:service.id,citizenId:citizen.id,description:{contains:"Demo request"}}});if(!request)request=await db.serviceRequest.create({data:{serviceId:service.id,citizenId:citizen.id,departmentId:department.id,assignedEmployeeId:employee(department.id)?.id,status:ServiceRequestStatus.ASSIGNED,description:"Demo request for municipal assistance and an appointment.",address:"Nizami Street 25",contactPhone:citizen.phone,appointmentSlotId:slot.id,fieldValues:{create:[{serviceFieldId:topic.id,value:"assistance",fieldLabelSnapshot:topic.label,fieldTypeSnapshot:topic.type}]}}});if(!await db.serviceRequestStatusHistory.findFirst({where:{serviceRequestId:request.id}}))await db.serviceRequestStatusHistory.createMany({data:[{serviceRequestId:request.id,oldStatus:null,newStatus:ServiceRequestStatus.SUBMITTED,changedById:citizen.id},{serviceRequestId:request.id,oldStatus:ServiceRequestStatus.SUBMITTED,newStatus:ServiceRequestStatus.ASSIGNED,changedById:head(department.id).id,note:"Assigned to a demo department employee."}]})}}
+  for (const department of departments) {
+    let service = await db.municipalService.findFirst({
+      where: { departmentId: department.id },
+    });
+    if (!service)
+      service = await db.municipalService.create({
+        data: {
+          departmentId: department.id,
+          title: `${department.name} Assistance`,
+          description: `Request help directly from the ${department.name} department.`,
+          instructions:
+            "Describe your request and choose an available appointment if needed.",
+          isActive: true,
+        },
+      });
+    await db.municipalService.update({
+      where: { id: service.id },
+      data: {
+        allowsDocuments: true,
+        maxDocuments: 3,
+        supportsAppointments: true,
+      },
+    });
+    const topic = await db.municipalServiceField.upsert({
+      where: {
+        serviceId_fieldKey: {
+          serviceId: service.id,
+          fieldKey: "request_topic",
+        },
+      },
+      update: { isActive: true },
+      create: {
+        serviceId: service.id,
+        label: "Request Topic",
+        fieldKey: "request_topic",
+        type: ServiceFieldType.SELECT,
+        isRequired: true,
+        options: [
+          { value: "information", label: "Information" },
+          { value: "appointment", label: "Appointment" },
+          { value: "assistance", label: "Assistance" },
+        ],
+        sortOrder: 0,
+      },
+    });
+    await db.municipalServiceField.upsert({
+      where: {
+        serviceId_fieldKey: {
+          serviceId: service.id,
+          fieldKey: "additional_details",
+        },
+      },
+      update: { isActive: true },
+      create: {
+        serviceId: service.id,
+        label: "Additional Details",
+        fieldKey: "additional_details",
+        type: ServiceFieldType.TEXTAREA,
+        maxLength: 500,
+        sortOrder: 1,
+      },
+    });
+    let slot = await db.serviceAppointmentSlot.findFirst({
+      where: { serviceId: service.id, startsAt: { gt: now } },
+    });
+    if (!slot)
+      slot = await db.serviceAppointmentSlot.create({
+        data: {
+          serviceId: service.id,
+          departmentId: department.id,
+          startsAt: days(7),
+          endsAt: new Date(days(7).getTime() + 30 * 60000),
+          capacity: 4,
+        },
+      });
+    if (department.id === publicWorks.id) {
+      let request = await db.serviceRequest.findFirst({
+        where: {
+          serviceId: service.id,
+          citizenId: citizen.id,
+          description: { contains: "Demo request" },
+        },
+      });
+      if (!request)
+        request = await db.serviceRequest.create({
+          data: {
+            serviceId: service.id,
+            citizenId: citizen.id,
+            departmentId: department.id,
+            assignedEmployeeId: employee(department.id)?.id,
+            status: ServiceRequestStatus.ASSIGNED,
+            description:
+              "Demo request for municipal assistance and an appointment.",
+            address: "Nizami Street 25",
+            contactPhone: citizen.phone,
+            appointmentSlotId: slot.id,
+            fieldValues: {
+              create: [
+                {
+                  serviceFieldId: topic.id,
+                  value: "assistance",
+                  fieldLabelSnapshot: topic.label,
+                  fieldTypeSnapshot: topic.type,
+                },
+              ],
+            },
+          },
+        });
+      if (
+        !(await db.serviceRequestStatusHistory.findFirst({
+          where: { serviceRequestId: request.id },
+        }))
+      )
+        await db.serviceRequestStatusHistory.createMany({
+          data: [
+            {
+              serviceRequestId: request.id,
+              oldStatus: null,
+              newStatus: ServiceRequestStatus.SUBMITTED,
+              changedById: citizen.id,
+            },
+            {
+              serviceRequestId: request.id,
+              oldStatus: ServiceRequestStatus.SUBMITTED,
+              newStatus: ServiceRequestStatus.ASSIGNED,
+              changedById: head(department.id).id,
+              note: "Assigned to a demo department employee.",
+            },
+          ],
+        });
+    }
+  }
 
-  const road=await db.roadEvent.upsert({where:{source_externalSourceId:{source:InfrastructureDataSource.DEMO,externalSourceId:"demo-roadwork-central"}},update:{endsAt:days(10),status:RoadEventStatus.ACTIVE},create:{departmentId:publicWorks.id,createdById:head(publicWorks.id).id,title:"Central avenue resurfacing",description:"Demo road resurfacing with one lane temporarily closed.",type:RoadEventType.CONSTRUCTION,severity:RoadEventSeverity.MODERATE,status:RoadEventStatus.ACTIVE,address:"Central Avenue",latitude:40.4098,longitude:49.864,isPublic:true,startsAt:days(-1),endsAt:days(10),source:InfrastructureDataSource.DEMO,externalSourceId:"demo-roadwork-central"}});
-  const parking=await db.parkingFacility.upsert({where:{source_externalSourceId:{source:InfrastructureDataSource.DEMO,externalSourceId:"demo-central-parking"}},update:{isActive:true},create:{departmentId:publicWorks.id,name:"Central City Parking",description:"Sample reservable municipal parking facility.",type:ParkingFacilityType.GARAGE,address:"Central Avenue 10",latitude:40.4079,longitude:49.869,totalSpaces:120,availableSpaces:48,accessibleSpaces:6,evChargingSpaces:8,hourlyPrice:1.5,currency:"AZN",openingHours:"24/7",supportsReservation:true,source:InfrastructureDataSource.DEMO,externalSourceId:"demo-central-parking"}});if(!await db.parkingReservation.findFirst({where:{parkingFacilityId:parking.id,citizenId:citizen.id,startsAt:{gt:now}}}))await db.parkingReservation.create({data:{parkingFacilityId:parking.id,citizenId:citizen.id,startsAt:hours(24),endsAt:hours(26)}});
-  for(const name of["Hospital","Library","Park","Community Centre"]){const category=await db.cityFacilityCategory.upsert({where:{name},update:{isActive:true},create:{name,isActive:true}});await db.cityFacility.upsert({where:{source_externalSourceId:{source:InfrastructureDataSource.DEMO,externalSourceId:`demo-facility-${name.toLowerCase().replaceAll(" ","-")}`}},update:{isActive:true},create:{categoryId:category.id,departmentId:publicWorks.id,name:`Central ${name}`,description:`Sample ${name.toLowerCase()} shown for development.`,address:`Demo ${name} Street`,latitude:40.405+category.id/10000,longitude:49.86+category.id/10000,openingHours:"09:00-18:00",source:InfrastructureDataSource.DEMO,externalSourceId:`demo-facility-${name.toLowerCase().replaceAll(" ","-")}`}})}
+  const road = await db.roadEvent.upsert({
+    where: {
+      source_externalSourceId: {
+        source: InfrastructureDataSource.DEMO,
+        externalSourceId: "demo-roadwork-central",
+      },
+    },
+    update: { endsAt: days(10), status: RoadEventStatus.ACTIVE },
+    create: {
+      departmentId: publicWorks.id,
+      createdById: head(publicWorks.id).id,
+      title: "Central avenue resurfacing",
+      description: "Demo road resurfacing with one lane temporarily closed.",
+      type: RoadEventType.CONSTRUCTION,
+      severity: RoadEventSeverity.MODERATE,
+      status: RoadEventStatus.ACTIVE,
+      address: "Central Avenue",
+      latitude: 40.4098,
+      longitude: 49.864,
+      isPublic: true,
+      startsAt: days(-1),
+      endsAt: days(10),
+      source: InfrastructureDataSource.DEMO,
+      externalSourceId: "demo-roadwork-central",
+    },
+  });
+  const parking = await db.parkingFacility.upsert({
+    where: {
+      source_externalSourceId: {
+        source: InfrastructureDataSource.DEMO,
+        externalSourceId: "demo-central-parking",
+      },
+    },
+    update: { isActive: true },
+    create: {
+      departmentId: publicWorks.id,
+      name: "Central City Parking",
+      description: "Sample reservable municipal parking facility.",
+      type: ParkingFacilityType.GARAGE,
+      address: "Central Avenue 10",
+      latitude: 40.4079,
+      longitude: 49.869,
+      totalSpaces: 120,
+      availableSpaces: 48,
+      accessibleSpaces: 6,
+      evChargingSpaces: 8,
+      hourlyPrice: 1.5,
+      currency: "AZN",
+      openingHours: "24/7",
+      supportsReservation: true,
+      source: InfrastructureDataSource.DEMO,
+      externalSourceId: "demo-central-parking",
+    },
+  });
+  if (
+    !(await db.parkingReservation.findFirst({
+      where: {
+        parkingFacilityId: parking.id,
+        citizenId: citizen.id,
+        startsAt: { gt: now },
+      },
+    }))
+  )
+    await db.parkingReservation.create({
+      data: {
+        parkingFacilityId: parking.id,
+        citizenId: citizen.id,
+        startsAt: hours(24),
+        endsAt: hours(26),
+      },
+    });
+  for (const name of ["Hospital", "Library", "Park", "Community Centre"]) {
+    const category = await db.cityFacilityCategory.upsert({
+      where: { name },
+      update: { isActive: true },
+      create: { name, isActive: true },
+    });
+    await db.cityFacility.upsert({
+      where: {
+        source_externalSourceId: {
+          source: InfrastructureDataSource.DEMO,
+          externalSourceId: `demo-facility-${name.toLowerCase().replaceAll(" ", "-")}`,
+        },
+      },
+      update: { isActive: true },
+      create: {
+        categoryId: category.id,
+        departmentId: publicWorks.id,
+        name: `Central ${name}`,
+        description: `Sample ${name.toLowerCase()} shown for development.`,
+        address: `Demo ${name} Street`,
+        latitude: 40.405 + category.id / 10000,
+        longitude: 49.86 + category.id / 10000,
+        openingHours: "09:00-18:00",
+        source: InfrastructureDataSource.DEMO,
+        externalSourceId: `demo-facility-${name.toLowerCase().replaceAll(" ", "-")}`,
+      },
+    });
+  }
 
-  const zone=await db.wasteCollectionZone.upsert({where:{departmentId_name:{departmentId:wasteDepartment.id,name:"Central Collection Zone"}},update:{isActive:true},create:{departmentId:wasteDepartment.id,name:"Central Collection Zone",description:"Sample weekly collection coverage.",city:"Baku",district:"Central",isActive:true}});for(const[wasteType,day,time]of[[WasteType.GENERAL,Weekday.MONDAY,"08:00"],[WasteType.RECYCLING,Weekday.THURSDAY,"09:00"],[WasteType.ORGANIC,Weekday.SATURDAY,"08:30"]]as const)await db.wasteCollectionSchedule.upsert({where:{zoneId_wasteType_dayOfWeek:{zoneId:zone.id,wasteType,dayOfWeek:day}},update:{isActive:true},create:{zoneId:zone.id,wasteType,dayOfWeek:day,collectionTime:time,isActive:true}});await db.wasteFacility.upsert({where:{source_externalSourceId:{source:InfrastructureDataSource.DEMO,externalSourceId:"demo-recycling-centre"}},update:{isActive:true},create:{departmentId:wasteDepartment.id,type:WasteFacilityType.RECYCLING_CENTER,name:"Central Recycling Centre",description:"Sample drop-off point for recyclable materials.",address:"Green Street 12",latitude:40.411,longitude:49.871,openingHours:"Mon-Sat 08:00-18:00",source:InfrastructureDataSource.DEMO,externalSourceId:"demo-recycling-centre",acceptedTypes:{create:[{wasteType:WasteType.PAPER},{wasteType:WasteType.PLASTIC},{wasteType:WasteType.GLASS},{wasteType:WasteType.METAL}]}}});let address=await db.address.findFirst({where:{userId:citizen.id,isPrimary:true}});if(!address)address=await db.address.create({data:{userId:citizen.id,label:"Home",country:"Azerbaijan",city:"Baku",district:"Central",street:"Nizami Street",buildingNumber:"25",isPrimary:true,wasteCollectionZoneId:zone.id}});else await db.address.update({where:{id:address.id},data:{wasteCollectionZoneId:zone.id}});await db.wasteReminderPreference.upsert({where:{userId_addressId_wasteType:{userId:citizen.id,addressId:address.id,wasteType:WasteType.GENERAL}},update:{enabled:true},create:{userId:citizen.id,addressId:address.id,wasteType:WasteType.GENERAL,enabled:true,reminderHoursBefore:12}});
+  const zone = await db.wasteCollectionZone.upsert({
+    where: {
+      departmentId_name: {
+        departmentId: wasteDepartment.id,
+        name: "Central Collection Zone",
+      },
+    },
+    update: { isActive: true },
+    create: {
+      departmentId: wasteDepartment.id,
+      name: "Central Collection Zone",
+      description: "Sample weekly collection coverage.",
+      city: "Baku",
+      district: "Central",
+      isActive: true,
+    },
+  });
+  for (const [wasteType, day, time] of [
+    [WasteType.GENERAL, Weekday.MONDAY, "08:00"],
+    [WasteType.RECYCLING, Weekday.THURSDAY, "09:00"],
+    [WasteType.ORGANIC, Weekday.SATURDAY, "08:30"],
+  ] as const)
+    await db.wasteCollectionSchedule.upsert({
+      where: {
+        zoneId_wasteType_dayOfWeek: {
+          zoneId: zone.id,
+          wasteType,
+          dayOfWeek: day,
+        },
+      },
+      update: { isActive: true },
+      create: {
+        zoneId: zone.id,
+        wasteType,
+        dayOfWeek: day,
+        collectionTime: time,
+        isActive: true,
+      },
+    });
+  await db.wasteFacility.upsert({
+    where: {
+      source_externalSourceId: {
+        source: InfrastructureDataSource.DEMO,
+        externalSourceId: "demo-recycling-centre",
+      },
+    },
+    update: { isActive: true },
+    create: {
+      departmentId: wasteDepartment.id,
+      type: WasteFacilityType.RECYCLING_CENTER,
+      name: "Central Recycling Centre",
+      description: "Sample drop-off point for recyclable materials.",
+      address: "Green Street 12",
+      latitude: 40.411,
+      longitude: 49.871,
+      openingHours: "Mon-Sat 08:00-18:00",
+      source: InfrastructureDataSource.DEMO,
+      externalSourceId: "demo-recycling-centre",
+      acceptedTypes: {
+        create: [
+          { wasteType: WasteType.PAPER },
+          { wasteType: WasteType.PLASTIC },
+          { wasteType: WasteType.GLASS },
+          { wasteType: WasteType.METAL },
+        ],
+      },
+    },
+  });
+  let address = await db.address.findFirst({
+    where: { userId: citizen.id, isPrimary: true },
+  });
+  if (!address)
+    address = await db.address.create({
+      data: {
+        userId: citizen.id,
+        label: "Home",
+        country: "Azerbaijan",
+        city: "Baku",
+        district: "Central",
+        street: "Nizami Street",
+        buildingNumber: "25",
+        isPrimary: true,
+        wasteCollectionZoneId: zone.id,
+      },
+    });
+  else
+    await db.address.update({
+      where: { id: address.id },
+      data: { wasteCollectionZoneId: zone.id },
+    });
+  await db.wasteReminderPreference.upsert({
+    where: {
+      userId_addressId_wasteType: {
+        userId: citizen.id,
+        addressId: address.id,
+        wasteType: WasteType.GENERAL,
+      },
+    },
+    update: { enabled: true },
+    create: {
+      userId: citizen.id,
+      addressId: address.id,
+      wasteType: WasteType.GENERAL,
+      enabled: true,
+      reminderHoursBefore: 12,
+    },
+  });
 
-  const station=await db.environmentalStation.upsert({where:{source_externalSourceId:{source:InfrastructureDataSource.DEMO,externalSourceId:"demo-central-air"}},update:{isActive:true},create:{departmentId:environmentDepartment.id,name:"Central Air Quality Station",description:"Sample municipality monitoring station.",latitude:40.4085,longitude:49.868,address:"Central District",source:InfrastructureDataSource.DEMO,externalSourceId:"demo-central-air"}});for(const[metric,value,unit]of[[EnvironmentalMetric.AQI,42,"US AQI"],[EnvironmentalMetric.PM25,11.2,"µg/m³"],[EnvironmentalMetric.PM10,22.8,"µg/m³"],[EnvironmentalMetric.TEMPERATURE,22.5,"°C"],[EnvironmentalMetric.HUMIDITY,58,"%"]]as const)if(!await db.environmentalMeasurement.findFirst({where:{stationId:station.id,metric,measuredAt:{gte:days(-1)}}}))await db.environmentalMeasurement.create({data:{stationId:station.id,metric,value,unit,measuredAt:now,source:InfrastructureDataSource.DEMO}});
-  await db.emergencyAlert.upsert({where:{source_externalSourceId:{source:InfrastructureDataSource.DEMO,externalSourceId:"demo-weather-advisory"}},update:{endsAt:days(3),isPublished:true},create:{departmentId:safetyDepartment.id,createdById:head(safetyDepartment.id).id,type:EmergencyAlertType.SEVERE_WEATHER,severity:EmergencyAlertSeverity.ADVISORY,title:"Strong wind advisory",message:"Sample advisory: secure loose outdoor objects and use caution in exposed areas.",startsAt:now,endsAt:days(3),isPublished:true,publishedAt:now,source:InfrastructureDataSource.DEMO,externalSourceId:"demo-weather-advisory"}});
-  const summary=await Promise.all([db.user.count(),db.department.count(),db.reportCategory.count(),db.report.count(),db.municipalService.count(),db.serviceRequest.count(),db.announcement.count(),db.cityEvent.count(),db.roadEvent.count(),db.parkingFacility.count(),db.cityFacility.count(),db.wasteCollectionZone.count(),db.wasteFacility.count(),db.environmentalStation.count(),db.emergencyAlert.count()]);console.log(Object.fromEntries(["users","departments","reportCategories","reports","services","serviceRequests","announcements","events","roadEvents","parkingFacilities","cityFacilities","wasteZones","wasteFacilities","environmentStations","emergencyAlerts"].map((key,index)=>[key,summary[index]])));console.log("Demo citizen: demo.citizen@cityzen.test / Password123");void road;
+  const station = await db.environmentalStation.upsert({
+    where: {
+      source_externalSourceId: {
+        source: InfrastructureDataSource.DEMO,
+        externalSourceId: "demo-central-air",
+      },
+    },
+    update: { isActive: true },
+    create: {
+      departmentId: environmentDepartment.id,
+      name: "Central Air Quality Station",
+      description: "Sample municipality monitoring station.",
+      latitude: 40.4085,
+      longitude: 49.868,
+      address: "Central District",
+      source: InfrastructureDataSource.DEMO,
+      externalSourceId: "demo-central-air",
+    },
+  });
+  for (const [metric, value, unit] of [
+    [EnvironmentalMetric.AQI, 42, "US AQI"],
+    [EnvironmentalMetric.PM25, 11.2, "µg/m³"],
+    [EnvironmentalMetric.PM10, 22.8, "µg/m³"],
+    [EnvironmentalMetric.TEMPERATURE, 22.5, "°C"],
+    [EnvironmentalMetric.HUMIDITY, 58, "%"],
+  ] as const)
+    if (
+      !(await db.environmentalMeasurement.findFirst({
+        where: { stationId: station.id, metric, measuredAt: { gte: days(-1) } },
+      }))
+    )
+      await db.environmentalMeasurement.create({
+        data: {
+          stationId: station.id,
+          metric,
+          value,
+          unit,
+          measuredAt: now,
+          source: InfrastructureDataSource.DEMO,
+        },
+      });
+  await db.emergencyAlert.upsert({
+    where: {
+      source_externalSourceId: {
+        source: InfrastructureDataSource.DEMO,
+        externalSourceId: "demo-weather-advisory",
+      },
+    },
+    update: { endsAt: days(3), isPublished: true },
+    create: {
+      departmentId: safetyDepartment.id,
+      createdById: head(safetyDepartment.id).id,
+      type: EmergencyAlertType.SEVERE_WEATHER,
+      severity: EmergencyAlertSeverity.ADVISORY,
+      title: "Strong wind advisory",
+      message:
+        "Sample advisory: secure loose outdoor objects and use caution in exposed areas.",
+      startsAt: now,
+      endsAt: days(3),
+      isPublished: true,
+      publishedAt: now,
+      source: InfrastructureDataSource.DEMO,
+      externalSourceId: "demo-weather-advisory",
+    },
+  });
+  const summary = await Promise.all([
+    db.user.count(),
+    db.department.count(),
+    db.reportCategory.count(),
+    db.report.count(),
+    db.municipalService.count(),
+    db.serviceRequest.count(),
+    db.announcement.count(),
+    db.cityEvent.count(),
+    db.roadEvent.count(),
+    db.parkingFacility.count(),
+    db.cityFacility.count(),
+    db.wasteCollectionZone.count(),
+    db.wasteFacility.count(),
+    db.environmentalStation.count(),
+    db.emergencyAlert.count(),
+  ]);
+  console.log(
+    Object.fromEntries(
+      [
+        "users",
+        "departments",
+        "reportCategories",
+        "reports",
+        "services",
+        "serviceRequests",
+        "announcements",
+        "events",
+        "roadEvents",
+        "parkingFacilities",
+        "cityFacilities",
+        "wasteZones",
+        "wasteFacilities",
+        "environmentStations",
+        "emergencyAlerts",
+      ].map((key, index) => [key, summary[index]]),
+    ),
+  );
+  console.log("Demo citizen: demo.citizen@cityzen.test / Password123");
+  void road;
 }
-main().catch(error=>{console.error(error);process.exitCode=1}).finally(()=>db.$disconnect());
+main()
+  .catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  })
+  .finally(() => db.$disconnect());

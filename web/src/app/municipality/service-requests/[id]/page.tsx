@@ -1,4 +1,239 @@
-"use client";import Link from"next/link";import{useParams}from"next/navigation";import{useCallback,useEffect,useState}from"react";import{StaffRoute}from"@/components/auth/ProtectedRoute";import{ServiceRequestExtras}from"@/components/service-requests/ServiceRequestExtras";import{ServiceRequestStatusBadge}from"@/components/service-requests/ServiceRequestStatusBadge";import{ServiceRequestTimeline}from"@/components/service-requests/ServiceRequestTimeline";import{useAuth}from"@/context/AuthContext";import{getManagementEmployees,type ManagementEmployee}from"@/lib/management";import{assignServiceRequest,getServiceRequest,serviceRequestReference,updateServiceRequestStatus}from"@/lib/service-requests";import type{ServiceRequest,ServiceRequestStatus}from"@/types/service-request";
-const next:Record<ServiceRequestStatus,ServiceRequestStatus[]>={SUBMITTED:["UNDER_REVIEW","REJECTED"],UNDER_REVIEW:["ASSIGNED","REJECTED"],ASSIGNED:["IN_PROGRESS","REJECTED"],IN_PROGRESS:["COMPLETED","REJECTED"],COMPLETED:[],REJECTED:[],CANCELLED:[]};
-export default function Page(){const{id}=useParams<{id:string}>(),{user}=useAuth(),[request,setRequest]=useState<ServiceRequest|null>(null),[employees,setEmployees]=useState<ManagementEmployee[]>([]),[employeeId,setEmployeeId]=useState(""),[status,setStatus]=useState<ServiceRequestStatus|"">(""),[note,setNote]=useState(""),[response,setResponse]=useState(""),[error,setError]=useState(""),[busy,setBusy]=useState(false);const load=useCallback(()=>getServiceRequest(Number(id)).then(r=>{setRequest(r.request);setResponse(r.request.municipalityResponse??"")}).catch(()=>setError("Request not found or inaccessible.")),[id]);useEffect(()=>{void load()},[load]);const canAssign=user?.role==="DEPARTMENT_HEAD"||user?.role==="ADMIN";useEffect(()=>{if(canAssign&&request)void getManagementEmployees(request.departmentId).then(r=>setEmployees(r.employees))},[canAssign,request]);async function assign(){if(!employeeId)return;setBusy(true);try{await assignServiceRequest(Number(id),Number(employeeId));await load()}catch(e){setError(e instanceof Error?e.message:"Unable to assign")}finally{setBusy(false)}}async function update(){if(!status)return;setBusy(true);try{await updateServiceRequestStatus(Number(id),{status,note:note||undefined,municipalityResponse:response||undefined});setStatus("");setNote("");await load()}catch(e){setError(e instanceof Error?e.message:"Unable to update")}finally{setBusy(false)}}return <StaffRoute><main className="mx-auto max-w-5xl px-6 py-12"><Link href="/municipality/service-requests" className="font-semibold text-emerald-700">← Service Requests</Link>{error&&<p role="alert" className="mt-5 text-red-700">{error}</p>}{!request?<p className="mt-8">Loading...</p>:<><header className="mt-6 rounded-2xl bg-slate-900 p-7 text-white"><p className="font-mono text-emerald-300">{serviceRequestReference(request.id)}</p><h1 className="mt-2 text-3xl font-bold">{request.service.title}</h1><ServiceRequestStatusBadge status={request.status}/></header><section className="mt-6 grid gap-4 rounded-2xl border bg-white p-6 sm:grid-cols-2"><Info label="Citizen" value={`${request.citizen?.firstName??""} ${request.citizen?.lastName??""}`}/><Info label="Contact" value={request.contactPhone??request.citizen?.phone??null}/><Info label="Department" value={request.department.name}/><Info label="Assigned" value={request.assignedEmployee?`${request.assignedEmployee.firstName} ${request.assignedEmployee.lastName}`:"Not assigned"}/><div className="sm:col-span-2"><Info label="Description" value={request.description}/></div><Info label="Address" value={request.address}/><Info label="Municipality Response" value={request.municipalityResponse}/></section><ServiceRequestExtras request={request}/>{canAssign&&<section className="mt-6 rounded-2xl border bg-white p-6"><h2 className="text-xl font-bold">Assignment</h2><div className="mt-3 flex gap-3"><select value={employeeId} onChange={e=>setEmployeeId(e.target.value)} className="flex-1 rounded-lg border px-3 py-2"><option value="">Select employee</option>{employees.map(employee=><option key={employee.id} value={employee.id}>{employee.firstName} {employee.lastName}</option>)}</select><button disabled={busy||!employeeId} onClick={()=>void assign()} className="rounded-lg bg-emerald-700 px-4 py-2 font-semibold text-white">Assign</button></div></section>}<section className="mt-6 rounded-2xl border bg-white p-6"><h2 className="text-xl font-bold">Update Request</h2>{next[request.status].length?<div className="mt-4 space-y-3"><select value={status} onChange={e=>setStatus(e.target.value as ServiceRequestStatus)} className="w-full rounded-lg border px-3 py-2"><option value="">Select status</option>{next[request.status].map(item=><option key={item}>{item}</option>)}</select><textarea value={note} onChange={e=>setNote(e.target.value)} placeholder="Status note" className="w-full rounded-lg border p-3"/><textarea value={response} onChange={e=>setResponse(e.target.value)} placeholder="Citizen-visible municipality response" className="w-full rounded-lg border p-3"/><button disabled={busy||!status} onClick={()=>void update()} className="rounded-lg bg-emerald-700 px-4 py-2 font-semibold text-white">Update Request</button></div>:<p className="mt-3 text-slate-500">This request is in a terminal state.</p>}</section><section className="mt-6 rounded-2xl border bg-white p-6"><h2 className="text-xl font-bold">Status History</h2><ServiceRequestTimeline history={request.history??[]}/></section></>}</main></StaffRoute>}
-function Info({label,value}:{label:string;value:string|null}){return value?<div><dt className="text-xs font-bold uppercase text-slate-500">{label}</dt><dd className="mt-1 whitespace-pre-wrap">{value}</dd></div>:null}
+"use client";
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
+import { StaffRoute } from "@/components/auth/ProtectedRoute";
+import { ServiceRequestExtras } from "@/components/service-requests/ServiceRequestExtras";
+import {
+  ServiceRequestStatusBadge,
+  serviceRequestStatusLabel,
+} from "@/components/service-requests/ServiceRequestStatusBadge";
+import { ServiceRequestTimeline } from "@/components/service-requests/ServiceRequestTimeline";
+import { useAuth } from "@/context/AuthContext";
+import {
+  getManagementEmployees,
+  type ManagementEmployee,
+} from "@/lib/management";
+import {
+  assignServiceRequest,
+  getServiceRequest,
+  serviceRequestReference,
+  updateServiceRequestStatus,
+} from "@/lib/service-requests";
+import type {
+  ServiceRequest,
+  ServiceRequestStatus,
+} from "@/types/service-request";
+const next: Record<ServiceRequestStatus, ServiceRequestStatus[]> = {
+  SUBMITTED: ["UNDER_REVIEW", "REJECTED"],
+  UNDER_REVIEW: ["ASSIGNED", "REJECTED"],
+  ASSIGNED: ["IN_PROGRESS", "COMPLETED", "REJECTED"],
+  IN_PROGRESS: ["COMPLETED", "REJECTED"],
+  COMPLETED: [],
+  REJECTED: [],
+  CANCELLED: [],
+};
+export default function Page() {
+  const { id } = useParams<{ id: string }>(),
+    { user } = useAuth(),
+    [request, setRequest] = useState<ServiceRequest | null>(null),
+    [employees, setEmployees] = useState<ManagementEmployee[]>([]),
+    [employeeId, setEmployeeId] = useState(""),
+    [status, setStatus] = useState<ServiceRequestStatus | "">(""),
+    [note, setNote] = useState(""),
+    [response, setResponse] = useState(""),
+    [error, setError] = useState(""),
+    [busy, setBusy] = useState(false);
+  const load = useCallback(
+    () =>
+      getServiceRequest(Number(id))
+        .then((r) => {
+          setRequest(r.request);
+          setResponse(r.request.municipalityResponse ?? "");
+        })
+        .catch(() => setError("Request not found or inaccessible.")),
+    [id],
+  );
+  useEffect(() => {
+    void load();
+  }, [load]);
+  const canAssign = user?.role === "DEPARTMENT_HEAD" || user?.role === "ADMIN";
+  useEffect(() => {
+    if (canAssign && request)
+      void getManagementEmployees(request.departmentId).then((r) =>
+        setEmployees(r.employees),
+      );
+  }, [canAssign, request]);
+  async function assign() {
+    if (!employeeId) return;
+    setBusy(true);
+    try {
+      await assignServiceRequest(Number(id), Number(employeeId));
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unable to assign");
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function update() {
+    if (!status) return;
+    setBusy(true);
+    try {
+      await updateServiceRequestStatus(Number(id), {
+        status,
+        note: note || undefined,
+        municipalityResponse: response || undefined,
+      });
+      setStatus("");
+      setNote("");
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unable to update");
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <StaffRoute>
+      <main className="mx-auto max-w-5xl px-6 py-12">
+        <Link
+          href="/municipality/service-requests"
+          className="font-semibold text-emerald-700"
+        >
+          ← Service Requests
+        </Link>
+        {error && (
+          <p role="alert" className="mt-5 text-red-700">
+            {error}
+          </p>
+        )}
+        {!request ? (
+          <p className="mt-8">Loading...</p>
+        ) : (
+          <>
+            <header className="mt-6 rounded-2xl bg-slate-900 p-7 text-white">
+              <p className="font-mono text-emerald-300">
+                {serviceRequestReference(request.id)}
+              </p>
+              <h1 className="mt-2 text-3xl font-bold">
+                {request.service.title}
+              </h1>
+              <ServiceRequestStatusBadge status={request.status} />
+            </header>
+            <section className="mt-6 grid gap-4 rounded-2xl border bg-white p-6 sm:grid-cols-2">
+              <Info
+                label="Citizen"
+                value={`${request.citizen?.firstName ?? ""} ${request.citizen?.lastName ?? ""}`}
+              />
+              <Info
+                label="Contact"
+                value={request.contactPhone ?? request.citizen?.phone ?? null}
+              />
+              <Info label="Department" value={request.department.name} />
+              <Info
+                label="Assigned"
+                value={
+                  request.assignedEmployee
+                    ? `${request.assignedEmployee.firstName} ${request.assignedEmployee.lastName}`
+                    : "Not assigned"
+                }
+              />
+              <div className="sm:col-span-2">
+                <Info label="Description" value={request.description} />
+              </div>
+              <Info label="Address" value={request.address} />
+              <Info
+                label="Municipality Response"
+                value={request.municipalityResponse}
+              />
+            </section>
+            <ServiceRequestExtras request={request} />
+            {canAssign && (
+              <section className="mt-6 rounded-2xl border bg-white p-6">
+                <h2 className="text-xl font-bold">Assignment</h2>
+                <div className="mt-3 flex gap-3">
+                  <select
+                    value={employeeId}
+                    onChange={(e) => setEmployeeId(e.target.value)}
+                    className="flex-1 rounded-lg border px-3 py-2"
+                  >
+                    <option value="">Select employee</option>
+                    {employees.map((employee) => (
+                      <option key={employee.id} value={employee.id}>
+                        {employee.firstName} {employee.lastName}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    disabled={busy || !employeeId}
+                    onClick={() => void assign()}
+                    className="rounded-lg bg-emerald-700 px-4 py-2 font-semibold text-white"
+                  >
+                    Assign
+                  </button>
+                </div>
+              </section>
+            )}
+            <section className="mt-6 rounded-2xl border bg-white p-6">
+              <h2 className="text-xl font-bold">Update Request</h2>
+              {next[request.status].length ? (
+                <div className="mt-4 space-y-3">
+                  <select
+                    value={status}
+                    onChange={(e) =>
+                      setStatus(e.target.value as ServiceRequestStatus)
+                    }
+                    className="w-full rounded-lg border px-3 py-2"
+                  >
+                    <option value="">Select status</option>
+                    {next[request.status].map((item) => (
+                      <option key={item} value={item}>
+                        {serviceRequestStatusLabel(item)}
+                      </option>
+                    ))}
+                  </select>
+                  <textarea
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    placeholder="Status note"
+                    className="w-full rounded-lg border p-3"
+                  />
+                  <textarea
+                    value={response}
+                    onChange={(e) => setResponse(e.target.value)}
+                    placeholder="Citizen-visible municipality response"
+                    className="w-full rounded-lg border p-3"
+                  />
+                  <button
+                    disabled={busy || !status}
+                    onClick={() => void update()}
+                    className="rounded-lg bg-emerald-700 px-4 py-2 font-semibold text-white"
+                  >
+                    Update Request
+                  </button>
+                </div>
+              ) : (
+                <p className="mt-3 text-slate-500">
+                  This request is in a terminal state.
+                </p>
+              )}
+            </section>
+            <section className="mt-6 rounded-2xl border bg-white p-6">
+              <h2 className="text-xl font-bold">Status History</h2>
+              <ServiceRequestTimeline history={request.history ?? []} />
+            </section>
+          </>
+        )}
+      </main>
+    </StaffRoute>
+  );
+}
+function Info({ label, value }: { label: string; value: string | null }) {
+  return value ? (
+    <div>
+      <dt className="text-xs font-bold uppercase text-slate-500">{label}</dt>
+      <dd className="mt-1 whitespace-pre-wrap">{value}</dd>
+    </div>
+  ) : null;
+}

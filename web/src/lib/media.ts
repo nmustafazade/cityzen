@@ -7,7 +7,9 @@ export function resolveMediaUrl(imageUrl: string): string {
 
   try {
     const url = new URL(imageUrl);
-    return url.protocol === "http:" || url.protocol === "https:" ? url.toString() : "";
+    return url.protocol === "http:" || url.protocol === "https:"
+      ? url.toString()
+      : "";
   } catch {
     return "";
   }

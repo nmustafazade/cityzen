@@ -9,7 +9,14 @@ export interface InfrastructureMarker {
   title: string;
   detail: string;
   href: string;
-  kind: "road" | "parking" | "facility" | "waste" | "environment" | "issue" | "alert";
+  kind:
+    | "road"
+    | "parking"
+    | "facility"
+    | "waste"
+    | "environment"
+    | "issue"
+    | "alert";
 }
 const Canvas = dynamic(() => import("./InfrastructureMapCanvas"), {
   ssr: false,

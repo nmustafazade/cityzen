@@ -1,1 +1,39 @@
-import type{ReactNode}from"react";import{PageHeader}from"@/components/common/PageHeader";export const field="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-teal-600 focus:ring-3 focus:ring-teal-100";export const panel="surface-card p-6";export function ManagementShell({title,children}:{title:string;children:ReactNode}){return <main className="city-page"><PageHeader eyebrow="Municipality workspace" title={title} subtitle="Manage department content and keep public information accurate."/>{children}</main>}export function Label({text,children}:{text:string;children:ReactNode}){return <label className="block"><span className="mb-1.5 block text-sm font-bold text-slate-700">{text}</span>{children}</label>}
+import type { ReactNode } from "react";
+import { PageHeader } from "@/components/common/PageHeader";
+export const field =
+  "w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-teal-600 focus:ring-3 focus:ring-teal-100";
+export const panel = "surface-card p-6";
+export function ManagementShell({
+  title,
+  children,
+}: {
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <main className="city-page">
+      <PageHeader
+        eyebrow="Municipality workspace"
+        title={title}
+        subtitle="Manage department content and keep public information accurate."
+      />
+      {children}
+    </main>
+  );
+}
+export function Label({
+  text,
+  children,
+}: {
+  text: string;
+  children: ReactNode;
+}) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-sm font-bold text-slate-700">
+        {text}
+      </span>
+      {children}
+    </label>
+  );
+}

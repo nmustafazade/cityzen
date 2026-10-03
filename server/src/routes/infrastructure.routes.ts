@@ -18,16 +18,31 @@ infrastructureRouter.get("/facilities", controller.publicFacilities);
 infrastructureRouter.get("/facilities/:id", controller.publicFacility);
 
 export const municipalityInfrastructureRouter = Router();
-municipalityInfrastructureRouter.use(authenticate, authorizeRoles(UserRole.DEPARTMENT_HEAD, UserRole.ADMIN));
+municipalityInfrastructureRouter.use(
+  authenticate,
+  authorizeRoles(UserRole.DEPARTMENT_HEAD, UserRole.ADMIN),
+);
 municipalityInfrastructureRouter.get("/road-events", controller.managedRoads);
 municipalityInfrastructureRouter.post("/road-events", controller.createRoad);
-municipalityInfrastructureRouter.patch("/road-events/:id", controller.updateRoad);
+municipalityInfrastructureRouter.patch(
+  "/road-events/:id",
+  controller.updateRoad,
+);
 municipalityInfrastructureRouter.get("/parking", controller.managedParking);
 municipalityInfrastructureRouter.post("/parking", controller.createParking);
-municipalityInfrastructureRouter.patch("/parking/:id", controller.updateParking);
-municipalityInfrastructureRouter.get("/facilities", controller.managedFacilities);
+municipalityInfrastructureRouter.patch(
+  "/parking/:id",
+  controller.updateParking,
+);
+municipalityInfrastructureRouter.get(
+  "/facilities",
+  controller.managedFacilities,
+);
 municipalityInfrastructureRouter.post("/facilities", controller.createFacility);
-municipalityInfrastructureRouter.patch("/facilities/:id", controller.updateFacility);
+municipalityInfrastructureRouter.patch(
+  "/facilities/:id",
+  controller.updateFacility,
+);
 
 export const facilityCategoryAdminRouter = Router();
 facilityCategoryAdminRouter.use(authenticate, authorizeRoles(UserRole.ADMIN));

@@ -61,7 +61,10 @@ export async function loginUser(input: LoginInput) {
     throw new AppError(401, "Invalid email or password");
   }
 
-  const passwordMatches = await bcrypt.compare(input.password, user.passwordHash);
+  const passwordMatches = await bcrypt.compare(
+    input.password,
+    user.passwordHash,
+  );
 
   if (!passwordMatches) {
     throw new AppError(401, "Invalid email or password");

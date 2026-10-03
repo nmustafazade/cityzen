@@ -8,14 +8,20 @@ import type {
   CategoryInput,
   CategoryUpdate,
 } from "@/types/admin";
-import type { Department, DepartmentInput, DepartmentUpdate } from "@/types/department";
+import type {
+  Department,
+  DepartmentInput,
+  DepartmentUpdate,
+} from "@/types/department";
 import type { UserRole } from "@/types/user";
 
 function usersQuery(params: AdminUserFilters) {
   const query = new URLSearchParams();
   if (params.role) query.set("role", params.role);
-  if (params.departmentId) query.set("departmentId", String(params.departmentId));
-  if (params.isActive !== undefined) query.set("isActive", String(params.isActive));
+  if (params.departmentId)
+    query.set("departmentId", String(params.departmentId));
+  if (params.isActive !== undefined)
+    query.set("isActive", String(params.isActive));
   if (params.search) query.set("search", params.search);
   if (params.page) query.set("page", String(params.page));
   if (params.limit) query.set("limit", String(params.limit));
@@ -28,7 +34,9 @@ export function getAdminStats() {
 
 export function getAdminUsers(params: AdminUserFilters = {}) {
   const query = usersQuery(params);
-  return apiRequest<AdminUsersResponse>(`/api/admin/users${query ? `?${query}` : ""}`);
+  return apiRequest<AdminUsersResponse>(
+    `/api/admin/users${query ? `?${query}` : ""}`,
+  );
 }
 
 export function getAdminUser(id: number) {
@@ -36,39 +44,64 @@ export function getAdminUser(id: number) {
 }
 
 export function updateUserRole(id: number, role: UserRole) {
-  return apiRequest<{ user: AdminUser }>(`/api/admin/users/${id}/role`, { method: "PATCH", body: { role } });
+  return apiRequest<{ user: AdminUser }>(`/api/admin/users/${id}/role`, {
+    method: "PATCH",
+    body: { role },
+  });
 }
 
 export function updateUserStatus(id: number, isActive: boolean) {
-  return apiRequest<{ user: AdminUser }>(`/api/admin/users/${id}/status`, { method: "PATCH", body: { isActive } });
+  return apiRequest<{ user: AdminUser }>(`/api/admin/users/${id}/status`, {
+    method: "PATCH",
+    body: { isActive },
+  });
 }
 
 export function updateUserDepartment(id: number, departmentId: number | null) {
-  return apiRequest<{ user: AdminUser }>(`/api/admin/users/${id}/department`, { method: "PATCH", body: { departmentId } });
+  return apiRequest<{ user: AdminUser }>(`/api/admin/users/${id}/department`, {
+    method: "PATCH",
+    body: { departmentId },
+  });
 }
 
 export function getAdminDepartments(isActive?: boolean) {
   const query = isActive === undefined ? "" : `?isActive=${isActive}`;
-  return apiRequest<{ departments: Department[] }>(`/api/admin/departments${query}`);
+  return apiRequest<{ departments: Department[] }>(
+    `/api/admin/departments${query}`,
+  );
 }
 
 export function createDepartment(data: DepartmentInput) {
-  return apiRequest<{ department: Department }>("/api/admin/departments", { method: "POST", body: data });
+  return apiRequest<{ department: Department }>("/api/admin/departments", {
+    method: "POST",
+    body: data,
+  });
 }
 
 export function updateDepartment(id: number, data: DepartmentUpdate) {
-  return apiRequest<{ department: Department }>(`/api/admin/departments/${id}`, { method: "PATCH", body: data });
+  return apiRequest<{ department: Department }>(
+    `/api/admin/departments/${id}`,
+    { method: "PATCH", body: data },
+  );
 }
 
 export function getAdminCategories(isActive?: boolean) {
   const query = isActive === undefined ? "" : `?isActive=${isActive}`;
-  return apiRequest<{ categories: AdminCategory[] }>(`/api/admin/report-categories${query}`);
+  return apiRequest<{ categories: AdminCategory[] }>(
+    `/api/admin/report-categories${query}`,
+  );
 }
 
 export function createCategory(data: CategoryInput) {
-  return apiRequest<{ category: AdminCategory }>("/api/admin/report-categories", { method: "POST", body: data });
+  return apiRequest<{ category: AdminCategory }>(
+    "/api/admin/report-categories",
+    { method: "POST", body: data },
+  );
 }
 
 export function updateCategory(id: number, data: CategoryUpdate) {
-  return apiRequest<{ category: AdminCategory }>(`/api/admin/report-categories/${id}`, { method: "PATCH", body: data });
+  return apiRequest<{ category: AdminCategory }>(
+    `/api/admin/report-categories/${id}`,
+    { method: "PATCH", body: data },
+  );
 }

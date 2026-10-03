@@ -18,21 +18,29 @@ interface ReportImagePickerProps {
   disabled?: boolean;
 }
 
-export function ReportImagePicker({ maxFiles, onFilesChange, disabled = false }: ReportImagePickerProps) {
+export function ReportImagePicker({
+  maxFiles,
+  onFilesChange,
+  disabled = false,
+}: ReportImagePickerProps) {
   const [selected, setSelected] = useState<SelectedImage[]>([]);
   const [error, setError] = useState("");
   const previewUrls = useRef(new Set<string>());
 
   useEffect(() => {
     const urls = previewUrls.current;
-    return () => { urls.forEach((url) => URL.revokeObjectURL(url)); };
+    return () => {
+      urls.forEach((url) => URL.revokeObjectURL(url));
+    };
   }, []);
 
   function selectFiles(fileList: FileList | null) {
     if (!fileList) return;
     const incoming = Array.from(fileList);
     if (selected.length + incoming.length > maxFiles) {
-      setError(`You can select at most ${maxFiles} ${maxFiles === 1 ? "photo" : "photos"}.`);
+      setError(
+        `You can select at most ${maxFiles} ${maxFiles === 1 ? "photo" : "photos"}.`,
+      );
       return;
     }
     const invalidType = incoming.find((file) => !acceptedTypes.has(file.type));
@@ -71,7 +79,12 @@ export function ReportImagePicker({ maxFiles, onFilesChange, disabled = false }:
 
   return (
     <div>
-      <label htmlFor="report-images" className="mb-1.5 block text-sm font-semibold text-slate-800">Photos</label>
+      <label
+        htmlFor="report-images"
+        className="mb-1.5 block text-sm font-semibold text-slate-800"
+      >
+        Photos
+      </label>
       <input
         id="report-images"
         type="file"
@@ -84,18 +97,47 @@ export function ReportImagePicker({ maxFiles, onFilesChange, disabled = false }:
         }}
         className="block w-full rounded-lg border border-slate-300 bg-white text-sm text-slate-600 file:mr-4 file:border-0 file:bg-emerald-50 file:px-4 file:py-3 file:font-semibold file:text-emerald-700 hover:file:bg-emerald-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 disabled:opacity-50"
       />
-      <p className="mt-2 text-xs leading-5 text-slate-500">Up to {maxFiles} {maxFiles === 1 ? "photo" : "photos"}. JPEG, PNG or WebP. Maximum 5 MB each.</p>
-      {error && <p role="alert" className="mt-2 text-sm font-medium text-red-700">{error}</p>}
+      <p className="mt-2 text-xs leading-5 text-slate-500">
+        Up to {maxFiles} {maxFiles === 1 ? "photo" : "photos"}. JPEG, PNG or
+        WebP. Maximum 5 MB each.
+      </p>
+      {error && (
+        <p role="alert" className="mt-2 text-sm font-medium text-red-700">
+          {error}
+        </p>
+      )}
 
       {selected.length > 0 && (
         <ul className="mt-4 grid gap-3 sm:grid-cols-2">
           {selected.map((item, index) => (
-            <li key={item.previewUrl} className="flex gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
-              <Image loader={passthroughLoader} unoptimized src={item.previewUrl} alt={`Preview of ${item.file.name}`} width={80} height={80} className="size-20 shrink-0 rounded-lg object-cover" />
+            <li
+              key={item.previewUrl}
+              className="flex gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3"
+            >
+              <Image
+                loader={passthroughLoader}
+                unoptimized
+                src={item.previewUrl}
+                alt={`Preview of ${item.file.name}`}
+                width={80}
+                height={80}
+                className="size-20 shrink-0 rounded-lg object-cover"
+              />
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-slate-800">{item.file.name}</p>
-                <p className="mt-1 text-xs text-slate-500">{(item.file.size / 1024 / 1024).toFixed(1)} MB</p>
-                <button type="button" disabled={disabled} onClick={() => removeImage(index)} className="mt-2 text-sm font-semibold text-red-700 hover:text-red-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 disabled:opacity-50">Remove</button>
+                <p className="truncate text-sm font-medium text-slate-800">
+                  {item.file.name}
+                </p>
+                <p className="mt-1 text-xs text-slate-500">
+                  {(item.file.size / 1024 / 1024).toFixed(1)} MB
+                </p>
+                <button
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => removeImage(index)}
+                  className="mt-2 text-sm font-semibold text-red-700 hover:text-red-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 disabled:opacity-50"
+                >
+                  Remove
+                </button>
               </div>
             </li>
           ))}

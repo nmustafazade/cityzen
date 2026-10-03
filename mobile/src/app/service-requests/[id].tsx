@@ -36,7 +36,7 @@ export default function Page() {
   const x = r.data.request;
   return (
     <Screen>
-      <StatusBadge value={x.status} />
+      <StatusBadge value={x.status === "COMPLETED" ? "RESOLVED" : x.status} />
       <Text style={styles.title}>{x.service.title}</Text>
       <Text style={styles.muted}>
         {x.department.name} · SR-{String(x.id).padStart(6, "0")}
@@ -59,7 +59,9 @@ export default function Page() {
       <Text style={styles.heading}>Timeline</Text>
       {x.history.map((h) => (
         <Card key={h.id}>
-          <StatusBadge value={h.newStatus} />
+          <StatusBadge
+            value={h.newStatus === "COMPLETED" ? "RESOLVED" : h.newStatus}
+          />
           {h.note && <Text>{h.note}</Text>}
         </Card>
       ))}

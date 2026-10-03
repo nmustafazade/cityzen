@@ -1,35 +1,700 @@
-import{Prisma,ReportStatus,ServiceRequestStatus,UserRole}from"@prisma/client";import database from"../config/database";import type{AuthenticatedUser}from"../types/auth.types";import{AppError}from"../utils/app-error";
-export type AnalyticsRange={from:Date;to:Date;departmentId?:number};const cache=new Map<string,{expires:number,value:unknown}>(),CACHE_MS=120000;
-async function scope(user:AuthenticatedUser,requested?:number){if(user.role===UserRole.ADMIN)return requested;const account=await database.user.findUnique({where:{id:user.userId},select:{departmentId:true}});if(user.role!==UserRole.DEPARTMENT_HEAD||!account?.departmentId)throw new AppError(403,"Analytics access requires an administrator or department head");return account.departmentId}
-const period=(range:AnalyticsRange)=>({gte:range.from,lte:range.to});const stats=(values:number[])=>{if(!values.length)return{averageHours:null,medianHours:null,minimumHours:null,maximumHours:null,count:0};const sorted=[...values].sort((a,b)=>a-b),middle=Math.floor(sorted.length/2),median=sorted.length%2?sorted[middle]:(sorted[middle-1]+sorted[middle])/2;return{averageHours:+(values.reduce((a,b)=>a+b,0)/values.length).toFixed(1),medianHours:+median.toFixed(1),minimumHours:+sorted[0].toFixed(1),maximumHours:+sorted.at(-1)!.toFixed(1),count:values.length}};const hours=(from:Date,to:Date)=>(to.getTime()-from.getTime())/3600000;
-export async function context(user:AuthenticatedUser,input:AnalyticsRange){const departmentId=await scope(user,input.departmentId);return{...input,departmentId}}
-async function cached<T>(key:string,fn:()=>Promise<T>){const hit=cache.get(key);if(hit&&hit.expires>Date.now())return hit.value as T;const value=await fn();cache.set(key,{expires:Date.now()+CACHE_MS,value});return value}
-export async function overview(user:AuthenticatedUser,input:AnalyticsRange){const range=await context(user,input),key=`overview:${user.role}:${range.departmentId??"all"}:${range.from.toISOString()}:${range.to.toISOString()}`;return cached(key,async()=>{const reportWhere:Prisma.ReportWhereInput={departmentId:range.departmentId,createdAt:period(range)},requestWhere:Prisma.ServiceRequestWhereInput={departmentId:range.departmentId,createdAt:period(range)};const[reportGroups,requestGroups,feedback,resolved,completed]=await Promise.all([database.report.groupBy({by:["status"],where:reportWhere,_count:{_all:true}}),database.serviceRequest.groupBy({by:["status"],where:requestWhere,_count:{_all:true}}),database.reportFeedback.aggregate({where:{createdAt:period(range),report:{departmentId:range.departmentId}},_avg:{rating:true},_count:{_all:true}}),database.report.findMany({where:{...reportWhere,status:ReportStatus.RESOLVED,resolvedAt:{not:null}},select:{createdAt:true,resolvedAt:true}}),database.serviceRequest.findMany({where:{...requestWhere,status:ServiceRequestStatus.COMPLETED,completedAt:{not:null}},select:{createdAt:true,completedAt:true}})]);const rc=Object.fromEntries(reportGroups.map(x=>[x.status,x._count._all])),sc=Object.fromEntries(requestGroups.map(x=>[x.status,x._count._all]));return{range:{from:range.from,to:range.to,departmentId:range.departmentId??null},reports:{total:reportGroups.reduce((a,b)=>a+b._count._all,0),open:(rc.SUBMITTED??0)+(rc.UNDER_REVIEW??0)+(rc.ASSIGNED??0)+(rc.IN_PROGRESS??0),resolved:rc.RESOLVED??0,rejected:rc.REJECTED??0},serviceRequests:{total:requestGroups.reduce((a,b)=>a+b._count._all,0),open:(sc.SUBMITTED??0)+(sc.UNDER_REVIEW??0)+(sc.ASSIGNED??0)+(sc.IN_PROGRESS??0),completed:sc.COMPLETED??0,rejected:sc.REJECTED??0},citizenFeedback:{averageRating:feedback._avg.rating?+feedback._avg.rating.toFixed(2):null,responseCount:feedback._count._all},work:{averageReportResolutionHours:stats(resolved.map(x=>hours(x.createdAt,x.resolvedAt!))).averageHours,averageServiceCompletionHours:stats(completed.map(x=>hours(x.createdAt,x.completedAt!))).averageHours}}})}
-export async function reportAnalytics(user:AuthenticatedUser,input:AnalyticsRange){const range=await context(user,input),where:Prisma.ReportWhereInput={departmentId:range.departmentId,createdAt:period(range)};const[statuses,priorities,categories,resolved]=await Promise.all([database.report.groupBy({by:["status"],where,_count:{_all:true}}),database.report.groupBy({by:["priority"],where,_count:{_all:true}}),database.report.groupBy({by:["categoryId"],where,_count:{_all:true}}),database.report.findMany({where:{...where,status:ReportStatus.RESOLVED,resolvedAt:{not:null}},select:{createdAt:true,resolvedAt:true,categoryId:true,category:{select:{name:true}}}})]);const total=categories.reduce((a,b)=>a+b._count._all,0),byCategory=categories.map(row=>({categoryId:row.categoryId,count:row._count._all}));const names=await database.reportCategory.findMany({where:{id:{in:byCategory.map(x=>x.categoryId)}},select:{id:true,name:true}});const grouped=new Map<number,typeof resolved>();resolved.forEach(row=>grouped.set(row.categoryId,[...(grouped.get(row.categoryId)??[]),row]));return{statusBreakdown:statuses.map(x=>({status:x.status,count:x._count._all})),priorityBreakdown:priorities.map(x=>({priority:x.priority,count:x._count._all})),categoryBreakdown:byCategory.map(x=>({...x,category:names.find(n=>n.id===x.categoryId)?.name??"Unknown",percentage:total?+(x.count/total*100).toFixed(1):0})),resolutionTime:stats(resolved.map(x=>hours(x.createdAt,x.resolvedAt!))),resolutionByCategory:[...grouped.entries()].map(([categoryId,rows])=>({categoryId,category:rows[0].category.name,resolvedCount:rows.length,...stats(rows.map(x=>hours(x.createdAt,x.resolvedAt!))) }))}}
-export async function serviceAnalytics(user:AuthenticatedUser,input:AnalyticsRange){const range=await context(user,input),where:Prisma.ServiceRequestWhereInput={departmentId:range.departmentId,createdAt:period(range)};const[statuses,services,completed,slots]=await Promise.all([database.serviceRequest.groupBy({by:["status"],where,_count:{_all:true}}),database.serviceRequest.groupBy({by:["serviceId"],where,_count:{_all:true}}),database.serviceRequest.findMany({where:{...where,status:ServiceRequestStatus.COMPLETED,completedAt:{not:null}},select:{serviceId:true,createdAt:true,completedAt:true,service:{select:{title:true}}}}),database.serviceAppointmentSlot.findMany({where:{departmentId:range.departmentId,startsAt:period(range)},select:{capacity:true,requests:{where:{status:{notIn:[ServiceRequestStatus.CANCELLED,ServiceRequestStatus.REJECTED]}},select:{id:true,status:true}}}})]);const serviceNames=await database.municipalService.findMany({where:{id:{in:services.map(x=>x.serviceId)}},select:{id:true,title:true}}),grouped=new Map<number,typeof completed>();completed.forEach(row=>grouped.set(row.serviceId,[...(grouped.get(row.serviceId)??[]),row]));return{statusBreakdown:statuses.map(x=>({status:x.status,count:x._count._all})),mostUsedServices:services.map(x=>({serviceId:x.serviceId,service:serviceNames.find(s=>s.id===x.serviceId)?.title??"Unknown",count:x._count._all})).sort((a,b)=>b.count-a.count),completionTime:stats(completed.map(x=>hours(x.createdAt,x.completedAt!))),completionByService:[...grouped.entries()].map(([serviceId,rows])=>({serviceId,service:rows[0].service.title,...stats(rows.map(x=>hours(x.createdAt,x.completedAt!)))})),appointments:{totalSlots:slots.length,totalCapacity:slots.reduce((a,b)=>a+b.capacity,0),bookings:slots.reduce((a,b)=>a+b.requests.length,0),remainingCapacity:slots.reduce((a,b)=>a+Math.max(0,b.capacity-b.requests.length),0),completedAppointments:slots.reduce((a,b)=>a+b.requests.filter(r=>r.status===ServiceRequestStatus.COMPLETED).length,0)}}}
-export async function feedbackAnalytics(user:AuthenticatedUser,input:AnalyticsRange){const range=await context(user,input),where:Prisma.ReportFeedbackWhereInput={createdAt:period(range),report:{departmentId:range.departmentId}};const[aggregate,ratings,rows]=await Promise.all([database.reportFeedback.aggregate({where,_avg:{rating:true},_count:{_all:true}}),database.reportFeedback.groupBy({by:["rating"],where,_count:{_all:true}}),database.reportFeedback.findMany({where,select:{rating:true,confirmed:true,report:{select:{categoryId:true,category:{select:{name:true}}}}}})]);const grouped=new Map<number,typeof rows>();rows.forEach(row=>grouped.set(row.report.categoryId,[...(grouped.get(row.report.categoryId)??[]),row]));return{averageRating:aggregate._avg.rating?+aggregate._avg.rating.toFixed(2):null,feedbackCount:aggregate._count._all,confirmedResolvedPercentage:rows.length?+(rows.filter(x=>x.confirmed).length/rows.length*100).toFixed(1):null,ratingDistribution:[1,2,3,4,5].map(rating=>({rating,count:ratings.find(x=>x.rating===rating)?._count._all??0})),byCategory:[...grouped.entries()].map(([categoryId,items])=>({categoryId,category:items[0].report.category.name,averageRating:+(items.reduce((a,b)=>a+b.rating,0)/items.length).toFixed(2),responseCount:items.length}))}}
-export async function workloadAnalytics(user:AuthenticatedUser,input:AnalyticsRange){
-  const range=await context(user,input),departmentId=range.departmentId;
-  const employees=await database.user.findMany({
-    where:{departmentId,role:UserRole.EMPLOYEE,isActive:true},
-    select:{
-      id:true,firstName:true,lastName:true,
-      _count:{select:{
-        assignedReports:{where:{status:{in:[ReportStatus.ASSIGNED,ReportStatus.IN_PROGRESS]}}},
-        assignedServiceRequests:{where:{status:{in:[ServiceRequestStatus.ASSIGNED,ServiceRequestStatus.IN_PROGRESS]}}},
-      }},
+import {
+  Prisma,
+  ReportStatus,
+  ServiceRequestStatus,
+  UserRole,
+} from "@prisma/client";
+import database from "../config/database";
+import type { AuthenticatedUser } from "../types/auth.types";
+import { AppError } from "../utils/app-error";
+export type AnalyticsRange = { from: Date; to: Date; departmentId?: number };
+const cache = new Map<string, { expires: number; value: unknown }>(),
+  CACHE_MS = 120000;
+async function scope(user: AuthenticatedUser, requested?: number) {
+  if (user.role === UserRole.ADMIN) return requested;
+  const account = await database.user.findUnique({
+    where: { id: user.userId },
+    select: { departmentId: true },
+  });
+  if (user.role !== UserRole.DEPARTMENT_HEAD || !account?.departmentId)
+    throw new AppError(
+      403,
+      "Analytics access requires an administrator or department head",
+    );
+  return account.departmentId;
+}
+const period = (range: AnalyticsRange) => ({ gte: range.from, lte: range.to });
+const stats = (values: number[]) => {
+  if (!values.length)
+    return {
+      averageHours: null,
+      medianHours: null,
+      minimumHours: null,
+      maximumHours: null,
+      count: 0,
+    };
+  const sorted = [...values].sort((a, b) => a - b),
+    middle = Math.floor(sorted.length / 2),
+    median =
+      sorted.length % 2
+        ? sorted[middle]
+        : (sorted[middle - 1] + sorted[middle]) / 2;
+  return {
+    averageHours: +(values.reduce((a, b) => a + b, 0) / values.length).toFixed(
+      1,
+    ),
+    medianHours: +median.toFixed(1),
+    minimumHours: +sorted[0].toFixed(1),
+    maximumHours: +sorted.at(-1)!.toFixed(1),
+    count: values.length,
+  };
+};
+const hours = (from: Date, to: Date) =>
+  (to.getTime() - from.getTime()) / 3600000;
+export async function context(user: AuthenticatedUser, input: AnalyticsRange) {
+  const departmentId = await scope(user, input.departmentId);
+  return { ...input, departmentId };
+}
+async function cached<T>(key: string, fn: () => Promise<T>) {
+  const hit = cache.get(key);
+  if (hit && hit.expires > Date.now()) return hit.value as T;
+  const value = await fn();
+  cache.set(key, { expires: Date.now() + CACHE_MS, value });
+  return value;
+}
+export async function overview(user: AuthenticatedUser, input: AnalyticsRange) {
+  const range = await context(user, input),
+    key = `overview:${user.role}:${range.departmentId ?? "all"}:${range.from.toISOString()}:${range.to.toISOString()}`;
+  return cached(key, async () => {
+    const reportWhere: Prisma.ReportWhereInput = {
+        departmentId: range.departmentId,
+        createdAt: period(range),
+      },
+      requestWhere: Prisma.ServiceRequestWhereInput = {
+        departmentId: range.departmentId,
+        createdAt: period(range),
+      };
+    const [reportGroups, requestGroups, feedback, resolved, completed] =
+      await Promise.all([
+        database.report.groupBy({
+          by: ["status"],
+          where: reportWhere,
+          _count: { _all: true },
+        }),
+        database.serviceRequest.groupBy({
+          by: ["status"],
+          where: requestWhere,
+          _count: { _all: true },
+        }),
+        database.reportFeedback.aggregate({
+          where: {
+            createdAt: period(range),
+            report: { departmentId: range.departmentId },
+          },
+          _avg: { rating: true },
+          _count: { _all: true },
+        }),
+        database.report.findMany({
+          where: {
+            ...reportWhere,
+            status: ReportStatus.RESOLVED,
+            resolvedAt: { not: null },
+          },
+          select: { createdAt: true, resolvedAt: true },
+        }),
+        database.serviceRequest.findMany({
+          where: {
+            ...requestWhere,
+            status: ServiceRequestStatus.COMPLETED,
+            completedAt: { not: null },
+          },
+          select: { createdAt: true, completedAt: true },
+        }),
+      ]);
+    const rc = Object.fromEntries(
+        reportGroups.map((x) => [x.status, x._count._all]),
+      ),
+      sc = Object.fromEntries(
+        requestGroups.map((x) => [x.status, x._count._all]),
+      );
+    return {
+      range: {
+        from: range.from,
+        to: range.to,
+        departmentId: range.departmentId ?? null,
+      },
+      reports: {
+        total: reportGroups.reduce((a, b) => a + b._count._all, 0),
+        open:
+          (rc.SUBMITTED ?? 0) +
+          (rc.UNDER_REVIEW ?? 0) +
+          (rc.ASSIGNED ?? 0) +
+          (rc.IN_PROGRESS ?? 0),
+        resolved: rc.RESOLVED ?? 0,
+        rejected: rc.REJECTED ?? 0,
+      },
+      serviceRequests: {
+        total: requestGroups.reduce((a, b) => a + b._count._all, 0),
+        open:
+          (sc.SUBMITTED ?? 0) +
+          (sc.UNDER_REVIEW ?? 0) +
+          (sc.ASSIGNED ?? 0) +
+          (sc.IN_PROGRESS ?? 0),
+        completed: sc.COMPLETED ?? 0,
+        rejected: sc.REJECTED ?? 0,
+      },
+      citizenFeedback: {
+        averageRating: feedback._avg.rating
+          ? +feedback._avg.rating.toFixed(2)
+          : null,
+        responseCount: feedback._count._all,
+      },
+      work: {
+        averageReportResolutionHours: stats(
+          resolved.map((x) => hours(x.createdAt, x.resolvedAt!)),
+        ).averageHours,
+        averageServiceCompletionHours: stats(
+          completed.map((x) => hours(x.createdAt, x.completedAt!)),
+        ).averageHours,
+      },
+    };
+  });
+}
+export async function reportAnalytics(
+  user: AuthenticatedUser,
+  input: AnalyticsRange,
+) {
+  const range = await context(user, input),
+    where: Prisma.ReportWhereInput = {
+      departmentId: range.departmentId,
+      createdAt: period(range),
+    };
+  const [statuses, priorities, categories, resolved] = await Promise.all([
+    database.report.groupBy({ by: ["status"], where, _count: { _all: true } }),
+    database.report.groupBy({
+      by: ["priority"],
+      where,
+      _count: { _all: true },
+    }),
+    database.report.groupBy({
+      by: ["categoryId"],
+      where,
+      _count: { _all: true },
+    }),
+    database.report.findMany({
+      where: {
+        ...where,
+        status: ReportStatus.RESOLVED,
+        resolvedAt: { not: null },
+      },
+      select: {
+        createdAt: true,
+        resolvedAt: true,
+        categoryId: true,
+        category: { select: { name: true } },
+      },
+    }),
+  ]);
+  const total = categories.reduce((a, b) => a + b._count._all, 0),
+    byCategory = categories.map((row) => ({
+      categoryId: row.categoryId,
+      count: row._count._all,
+    }));
+  const names = await database.reportCategory.findMany({
+    where: { id: { in: byCategory.map((x) => x.categoryId) } },
+    select: { id: true, name: true },
+  });
+  const grouped = new Map<number, typeof resolved>();
+  resolved.forEach((row) =>
+    grouped.set(row.categoryId, [...(grouped.get(row.categoryId) ?? []), row]),
+  );
+  return {
+    statusBreakdown: statuses.map((x) => ({
+      status: x.status,
+      count: x._count._all,
+    })),
+    priorityBreakdown: priorities.map((x) => ({
+      priority: x.priority,
+      count: x._count._all,
+    })),
+    categoryBreakdown: byCategory.map((x) => ({
+      ...x,
+      category: names.find((n) => n.id === x.categoryId)?.name ?? "Unknown",
+      percentage: total ? +((x.count / total) * 100).toFixed(1) : 0,
+    })),
+    resolutionTime: stats(
+      resolved.map((x) => hours(x.createdAt, x.resolvedAt!)),
+    ),
+    resolutionByCategory: [...grouped.entries()].map(([categoryId, rows]) => ({
+      categoryId,
+      category: rows[0].category.name,
+      resolvedCount: rows.length,
+      ...stats(rows.map((x) => hours(x.createdAt, x.resolvedAt!))),
+    })),
+  };
+}
+export async function serviceAnalytics(
+  user: AuthenticatedUser,
+  input: AnalyticsRange,
+) {
+  const range = await context(user, input),
+    where: Prisma.ServiceRequestWhereInput = {
+      departmentId: range.departmentId,
+      createdAt: period(range),
+    };
+  const [statuses, services, completed, slots] = await Promise.all([
+    database.serviceRequest.groupBy({
+      by: ["status"],
+      where,
+      _count: { _all: true },
+    }),
+    database.serviceRequest.groupBy({
+      by: ["serviceId"],
+      where,
+      _count: { _all: true },
+    }),
+    database.serviceRequest.findMany({
+      where: {
+        ...where,
+        status: ServiceRequestStatus.COMPLETED,
+        completedAt: { not: null },
+      },
+      select: {
+        serviceId: true,
+        createdAt: true,
+        completedAt: true,
+        service: { select: { title: true } },
+      },
+    }),
+    database.serviceAppointmentSlot.findMany({
+      where: { departmentId: range.departmentId, startsAt: period(range) },
+      select: {
+        capacity: true,
+        requests: {
+          where: {
+            status: {
+              notIn: [
+                ServiceRequestStatus.CANCELLED,
+                ServiceRequestStatus.REJECTED,
+              ],
+            },
+          },
+          select: { id: true, status: true },
+        },
+      },
+    }),
+  ]);
+  const serviceNames = await database.municipalService.findMany({
+      where: { id: { in: services.map((x) => x.serviceId) } },
+      select: { id: true, title: true },
+    }),
+    grouped = new Map<number, typeof completed>();
+  completed.forEach((row) =>
+    grouped.set(row.serviceId, [...(grouped.get(row.serviceId) ?? []), row]),
+  );
+  return {
+    statusBreakdown: statuses.map((x) => ({
+      status: x.status,
+      count: x._count._all,
+    })),
+    mostUsedServices: services
+      .map((x) => ({
+        serviceId: x.serviceId,
+        service:
+          serviceNames.find((s) => s.id === x.serviceId)?.title ?? "Unknown",
+        count: x._count._all,
+      }))
+      .sort((a, b) => b.count - a.count),
+    completionTime: stats(
+      completed.map((x) => hours(x.createdAt, x.completedAt!)),
+    ),
+    completionByService: [...grouped.entries()].map(([serviceId, rows]) => ({
+      serviceId,
+      service: rows[0].service.title,
+      ...stats(rows.map((x) => hours(x.createdAt, x.completedAt!))),
+    })),
+    appointments: {
+      totalSlots: slots.length,
+      totalCapacity: slots.reduce((a, b) => a + b.capacity, 0),
+      bookings: slots.reduce((a, b) => a + b.requests.length, 0),
+      remainingCapacity: slots.reduce(
+        (a, b) => a + Math.max(0, b.capacity - b.requests.length),
+        0,
+      ),
+      completedAppointments: slots.reduce(
+        (a, b) =>
+          a +
+          b.requests.filter((r) => r.status === ServiceRequestStatus.COMPLETED)
+            .length,
+        0,
+      ),
+    },
+  };
+}
+export async function feedbackAnalytics(
+  user: AuthenticatedUser,
+  input: AnalyticsRange,
+) {
+  const range = await context(user, input),
+    where: Prisma.ReportFeedbackWhereInput = {
+      createdAt: period(range),
+      report: { departmentId: range.departmentId },
+    };
+  const [aggregate, ratings, rows] = await Promise.all([
+    database.reportFeedback.aggregate({
+      where,
+      _avg: { rating: true },
+      _count: { _all: true },
+    }),
+    database.reportFeedback.groupBy({
+      by: ["rating"],
+      where,
+      _count: { _all: true },
+    }),
+    database.reportFeedback.findMany({
+      where,
+      select: {
+        rating: true,
+        confirmed: true,
+        report: {
+          select: { categoryId: true, category: { select: { name: true } } },
+        },
+      },
+    }),
+  ]);
+  const grouped = new Map<number, typeof rows>();
+  rows.forEach((row) =>
+    grouped.set(row.report.categoryId, [
+      ...(grouped.get(row.report.categoryId) ?? []),
+      row,
+    ]),
+  );
+  return {
+    averageRating: aggregate._avg.rating
+      ? +aggregate._avg.rating.toFixed(2)
+      : null,
+    feedbackCount: aggregate._count._all,
+    confirmedResolvedPercentage: rows.length
+      ? +((rows.filter((x) => x.confirmed).length / rows.length) * 100).toFixed(
+          1,
+        )
+      : null,
+    ratingDistribution: [1, 2, 3, 4, 5].map((rating) => ({
+      rating,
+      count: ratings.find((x) => x.rating === rating)?._count._all ?? 0,
+    })),
+    byCategory: [...grouped.entries()].map(([categoryId, items]) => ({
+      categoryId,
+      category: items[0].report.category.name,
+      averageRating: +(
+        items.reduce((a, b) => a + b.rating, 0) / items.length
+      ).toFixed(2),
+      responseCount: items.length,
+    })),
+  };
+}
+export async function workloadAnalytics(
+  user: AuthenticatedUser,
+  input: AnalyticsRange,
+) {
+  const range = await context(user, input),
+    departmentId = range.departmentId;
+  const employees = await database.user.findMany({
+    where: { departmentId, role: UserRole.EMPLOYEE, isActive: true },
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      _count: {
+        select: {
+          assignedReports: {
+            where: {
+              status: { in: [ReportStatus.ASSIGNED, ReportStatus.IN_PROGRESS] },
+            },
+          },
+          assignedServiceRequests: {
+            where: {
+              status: {
+                in: [
+                  ServiceRequestStatus.ASSIGNED,
+                  ServiceRequestStatus.IN_PROGRESS,
+                ],
+              },
+            },
+          },
+        },
+      },
     },
   });
-  const[unassignedReports,inProgressReports,unassignedRequests,inProgressRequests]=await Promise.all([
-    database.report.count({where:{departmentId,assignedEmployeeId:null,status:{in:[ReportStatus.SUBMITTED,ReportStatus.UNDER_REVIEW]}}}),
-    database.report.count({where:{departmentId,status:ReportStatus.IN_PROGRESS}}),
-    database.serviceRequest.count({where:{departmentId,assignedEmployeeId:null,status:{in:[ServiceRequestStatus.SUBMITTED,ServiceRequestStatus.UNDER_REVIEW]}}}),
-    database.serviceRequest.count({where:{departmentId,status:ServiceRequestStatus.IN_PROGRESS}}),
+  const [
+    unassignedReports,
+    inProgressReports,
+    unassignedRequests,
+    inProgressRequests,
+  ] = await Promise.all([
+    database.report.count({
+      where: {
+        departmentId,
+        assignedEmployeeId: null,
+        status: { in: [ReportStatus.SUBMITTED, ReportStatus.UNDER_REVIEW] },
+      },
+    }),
+    database.report.count({
+      where: { departmentId, status: ReportStatus.IN_PROGRESS },
+    }),
+    database.serviceRequest.count({
+      where: {
+        departmentId,
+        assignedEmployeeId: null,
+        status: {
+          in: [
+            ServiceRequestStatus.SUBMITTED,
+            ServiceRequestStatus.UNDER_REVIEW,
+          ],
+        },
+      },
+    }),
+    database.serviceRequest.count({
+      where: { departmentId, status: ServiceRequestStatus.IN_PROGRESS },
+    }),
   ]);
-  return{reports:{unassigned:unassignedReports,inProgress:inProgressReports},serviceRequests:{unassigned:unassignedRequests,inProgress:inProgressRequests},employees:employees.map(x=>({id:x.id,name:`${x.firstName} ${x.lastName}`,assignedReports:x._count.assignedReports,assignedServiceRequests:x._count.assignedServiceRequests}))};
+  return {
+    reports: { unassigned: unassignedReports, inProgress: inProgressReports },
+    serviceRequests: {
+      unassigned: unassignedRequests,
+      inProgress: inProgressRequests,
+    },
+    employees: employees.map((x) => ({
+      id: x.id,
+      name: `${x.firstName} ${x.lastName}`,
+      assignedReports: x._count.assignedReports,
+      assignedServiceRequests: x._count.assignedServiceRequests,
+    })),
+  };
 }
-const bucket=(date:Date,range:AnalyticsRange)=>{const days=(range.to.getTime()-range.from.getTime())/86400000;if(days<=31)return date.toISOString().slice(0,10);if(days<=180){const copy=new Date(Date.UTC(date.getUTCFullYear(),date.getUTCMonth(),date.getUTCDate()-date.getUTCDay()));return copy.toISOString().slice(0,10)}return date.toISOString().slice(0,7)};
-export async function trends(user:AuthenticatedUser,input:AnalyticsRange){const range=await context(user,input);const[reports,requests]=await Promise.all([database.report.findMany({where:{departmentId:range.departmentId,OR:[{createdAt:period(range)},{resolvedAt:period(range)}]},select:{createdAt:true,resolvedAt:true}}),database.serviceRequest.findMany({where:{departmentId:range.departmentId,OR:[{createdAt:period(range)},{completedAt:period(range)}]},select:{createdAt:true,completedAt:true}})]);const map=new Map<string,{bucket:string;reportsCreated:number;reportsResolved:number;requestsSubmitted:number;requestsCompleted:number}>(),row=(key:string)=>map.get(key)??{bucket:key,reportsCreated:0,reportsResolved:0,requestsSubmitted:0,requestsCompleted:0};reports.forEach(x=>{if(x.createdAt>=range.from&&x.createdAt<=range.to){const k=bucket(x.createdAt,range),v=row(k);v.reportsCreated++;map.set(k,v)}if(x.resolvedAt){const k=bucket(x.resolvedAt,range),v=row(k);v.reportsResolved++;map.set(k,v)}});requests.forEach(x=>{if(x.createdAt>=range.from&&x.createdAt<=range.to){const k=bucket(x.createdAt,range),v=row(k);v.requestsSubmitted++;map.set(k,v)}if(x.completedAt){const k=bucket(x.completedAt,range),v=row(k);v.requestsCompleted++;map.set(k,v)}});return[...map.values()].sort((a,b)=>a.bucket.localeCompare(b.bucket))}
-export async function geography(user:AuthenticatedUser,input:AnalyticsRange,categoryId?:number,status?:ReportStatus){const range=await context(user,input),reports=await database.report.findMany({where:{departmentId:range.departmentId,createdAt:period(range),categoryId,status,latitude:{not:null},longitude:{not:null}},select:{latitude:true,longitude:true}}),map=new Map<string,number>();reports.forEach(x=>{const lat=Math.round(Number(x.latitude)*100)/100,lon=Math.round(Number(x.longitude)*100)/100,key=`${lat}:${lon}`;map.set(key,(map.get(key)??0)+1)});return[...map.entries()].map(([key,count])=>{const[latitudeBucket,longitudeBucket]=key.split(":").map(Number);return{latitudeBucket,longitudeBucket,count}})}
-export async function infrastructure(user:AuthenticatedUser,input:AnalyticsRange){const range=await context(user,input),departmentId=range.departmentId;const[parking,roads,roadTypes,roadSeverities,reservations,zones,schedules,wasteFacilities,reminders]=await Promise.all([database.parkingFacility.aggregate({where:{departmentId,isActive:true},_count:{_all:true},_sum:{totalSpaces:true,availableSpaces:true}}),database.roadEvent.count({where:{departmentId,status:{in:["SCHEDULED","ACTIVE"]},isPublic:true}}),database.roadEvent.groupBy({by:["type"],where:{departmentId,createdAt:period(range)},_count:{_all:true}}),database.roadEvent.groupBy({by:["severity"],where:{departmentId,createdAt:period(range)},_count:{_all:true}}),database.parkingReservation.groupBy({by:["status"],where:{createdAt:period(range),parkingFacility:{departmentId}},_count:{_all:true}}),database.wasteCollectionZone.count({where:{departmentId,isActive:true}}),database.wasteCollectionSchedule.count({where:{zone:{departmentId},isActive:true}}),database.wasteFacility.count({where:{departmentId,isActive:true}}),database.wasteReminderPreference.count({where:{enabled:true,address:{wasteCollectionZone:{departmentId}}}})]);return{parking:{facilities:parking._count._all,totalKnownCapacity:parking._sum.totalSpaces,knownAvailability:parking._sum.availableSpaces,reservations:reservations.reduce((a,b)=>a+b._count._all,0),cancellations:reservations.find(x=>x.status==="CANCELLED")?._count._all??0},roads:{active:roads,byType:roadTypes.map(x=>({type:x.type,count:x._count._all})),bySeverity:roadSeverities.map(x=>({severity:x.severity,count:x._count._all}))},waste:{zones,schedules,facilities:wasteFacilities,remindersEnabled:reminders}}}
-export async function exportCsv(user:AuthenticatedUser,input:AnalyticsRange,type:string){const data=type==="reports"?await reportAnalytics(user,input):type==="service-requests"?await serviceAnalytics(user,input):type==="feedback"?await feedbackAnalytics(user,input):null;if(!data)throw new AppError(400,"type must be reports, service-requests, or feedback");const rows:Array<[string,string|number|null]>=[];const flatten=(value:unknown,prefix="")=>{if(Array.isArray(value))value.forEach((item,index)=>flatten(item,`${prefix}${index}.`));else if(value&&typeof value==="object")Object.entries(value).forEach(([key,item])=>flatten(item,`${prefix}${key}.`));else rows.push([prefix.slice(0,-1),value as string|number|null])};flatten(data);const escape=(v:unknown)=>`"${String(v??"").replaceAll('"','""')}"`;return`metric,value\n${rows.map(row=>row.map(escape).join(",")).join("\n")}`}
+const bucket = (date: Date, range: AnalyticsRange) => {
+  const days = (range.to.getTime() - range.from.getTime()) / 86400000;
+  if (days <= 31) return date.toISOString().slice(0, 10);
+  if (days <= 180) {
+    const copy = new Date(
+      Date.UTC(
+        date.getUTCFullYear(),
+        date.getUTCMonth(),
+        date.getUTCDate() - date.getUTCDay(),
+      ),
+    );
+    return copy.toISOString().slice(0, 10);
+  }
+  return date.toISOString().slice(0, 7);
+};
+export async function trends(user: AuthenticatedUser, input: AnalyticsRange) {
+  const range = await context(user, input);
+  const [reports, requests] = await Promise.all([
+    database.report.findMany({
+      where: {
+        departmentId: range.departmentId,
+        OR: [{ createdAt: period(range) }, { resolvedAt: period(range) }],
+      },
+      select: { createdAt: true, resolvedAt: true },
+    }),
+    database.serviceRequest.findMany({
+      where: {
+        departmentId: range.departmentId,
+        OR: [{ createdAt: period(range) }, { completedAt: period(range) }],
+      },
+      select: { createdAt: true, completedAt: true },
+    }),
+  ]);
+  const map = new Map<
+      string,
+      {
+        bucket: string;
+        reportsCreated: number;
+        reportsResolved: number;
+        requestsSubmitted: number;
+        requestsCompleted: number;
+      }
+    >(),
+    row = (key: string) =>
+      map.get(key) ?? {
+        bucket: key,
+        reportsCreated: 0,
+        reportsResolved: 0,
+        requestsSubmitted: 0,
+        requestsCompleted: 0,
+      };
+  reports.forEach((x) => {
+    if (x.createdAt >= range.from && x.createdAt <= range.to) {
+      const k = bucket(x.createdAt, range),
+        v = row(k);
+      v.reportsCreated++;
+      map.set(k, v);
+    }
+    if (x.resolvedAt) {
+      const k = bucket(x.resolvedAt, range),
+        v = row(k);
+      v.reportsResolved++;
+      map.set(k, v);
+    }
+  });
+  requests.forEach((x) => {
+    if (x.createdAt >= range.from && x.createdAt <= range.to) {
+      const k = bucket(x.createdAt, range),
+        v = row(k);
+      v.requestsSubmitted++;
+      map.set(k, v);
+    }
+    if (x.completedAt) {
+      const k = bucket(x.completedAt, range),
+        v = row(k);
+      v.requestsCompleted++;
+      map.set(k, v);
+    }
+  });
+  return [...map.values()].sort((a, b) => a.bucket.localeCompare(b.bucket));
+}
+export async function geography(
+  user: AuthenticatedUser,
+  input: AnalyticsRange,
+  categoryId?: number,
+  status?: ReportStatus,
+) {
+  const range = await context(user, input),
+    reports = await database.report.findMany({
+      where: {
+        departmentId: range.departmentId,
+        createdAt: period(range),
+        categoryId,
+        status,
+        latitude: { not: null },
+        longitude: { not: null },
+      },
+      select: { latitude: true, longitude: true },
+    }),
+    map = new Map<string, number>();
+  reports.forEach((x) => {
+    const lat = Math.round(Number(x.latitude) * 100) / 100,
+      lon = Math.round(Number(x.longitude) * 100) / 100,
+      key = `${lat}:${lon}`;
+    map.set(key, (map.get(key) ?? 0) + 1);
+  });
+  return [...map.entries()].map(([key, count]) => {
+    const [latitudeBucket, longitudeBucket] = key.split(":").map(Number);
+    return { latitudeBucket, longitudeBucket, count };
+  });
+}
+export async function infrastructure(
+  user: AuthenticatedUser,
+  input: AnalyticsRange,
+) {
+  const range = await context(user, input),
+    departmentId = range.departmentId;
+  const [
+    parking,
+    roads,
+    roadTypes,
+    roadSeverities,
+    reservations,
+    zones,
+    schedules,
+    wasteFacilities,
+    reminders,
+  ] = await Promise.all([
+    database.parkingFacility.aggregate({
+      where: { departmentId, isActive: true },
+      _count: { _all: true },
+      _sum: { totalSpaces: true, availableSpaces: true },
+    }),
+    database.roadEvent.count({
+      where: {
+        departmentId,
+        status: { in: ["SCHEDULED", "ACTIVE"] },
+        isPublic: true,
+      },
+    }),
+    database.roadEvent.groupBy({
+      by: ["type"],
+      where: { departmentId, createdAt: period(range) },
+      _count: { _all: true },
+    }),
+    database.roadEvent.groupBy({
+      by: ["severity"],
+      where: { departmentId, createdAt: period(range) },
+      _count: { _all: true },
+    }),
+    database.parkingReservation.groupBy({
+      by: ["status"],
+      where: { createdAt: period(range), parkingFacility: { departmentId } },
+      _count: { _all: true },
+    }),
+    database.wasteCollectionZone.count({
+      where: { departmentId, isActive: true },
+    }),
+    database.wasteCollectionSchedule.count({
+      where: { zone: { departmentId }, isActive: true },
+    }),
+    database.wasteFacility.count({ where: { departmentId, isActive: true } }),
+    database.wasteReminderPreference.count({
+      where: {
+        enabled: true,
+        address: { wasteCollectionZone: { departmentId } },
+      },
+    }),
+  ]);
+  return {
+    parking: {
+      facilities: parking._count._all,
+      totalKnownCapacity: parking._sum.totalSpaces,
+      knownAvailability: parking._sum.availableSpaces,
+      reservations: reservations.reduce((a, b) => a + b._count._all, 0),
+      cancellations:
+        reservations.find((x) => x.status === "CANCELLED")?._count._all ?? 0,
+    },
+    roads: {
+      active: roads,
+      byType: roadTypes.map((x) => ({ type: x.type, count: x._count._all })),
+      bySeverity: roadSeverities.map((x) => ({
+        severity: x.severity,
+        count: x._count._all,
+      })),
+    },
+    waste: {
+      zones,
+      schedules,
+      facilities: wasteFacilities,
+      remindersEnabled: reminders,
+    },
+  };
+}
+export async function exportCsv(
+  user: AuthenticatedUser,
+  input: AnalyticsRange,
+  type: string,
+) {
+  const data =
+    type === "reports"
+      ? await reportAnalytics(user, input)
+      : type === "service-requests"
+        ? await serviceAnalytics(user, input)
+        : type === "feedback"
+          ? await feedbackAnalytics(user, input)
+          : null;
+  if (!data)
+    throw new AppError(
+      400,
+      "type must be reports, service-requests, or feedback",
+    );
+  const rows: Array<[string, string | number | null]> = [];
+  const flatten = (value: unknown, prefix = "") => {
+    if (Array.isArray(value))
+      value.forEach((item, index) => flatten(item, `${prefix}${index}.`));
+    else if (value && typeof value === "object")
+      Object.entries(value).forEach(([key, item]) =>
+        flatten(item, `${prefix}${key}.`),
+      );
+    else rows.push([prefix.slice(0, -1), value as string | number | null]);
+  };
+  flatten(data);
+  const escape = (v: unknown) => `"${String(v ?? "").replaceAll('"', '""')}"`;
+  return `metric,value\n${rows.map((row) => row.map(escape).join(",")).join("\n")}`;
+}

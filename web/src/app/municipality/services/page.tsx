@@ -1,1 +1,4 @@
-import{MunicipalServiceManager}from"@/components/content/MunicipalServiceManager";export default function Page(){return <MunicipalServiceManager/>}
+import { MunicipalServiceManager } from "@/components/content/MunicipalServiceManager";
+export default function Page() {
+  return <MunicipalServiceManager />;
+}

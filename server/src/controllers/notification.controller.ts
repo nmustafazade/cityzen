@@ -15,7 +15,8 @@ function userId(request: Request) {
 
 function positiveInteger(value: unknown, field: string) {
   const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed <= 0) throw new AppError(400, `${field} must be a positive integer`);
+  if (!Number.isInteger(parsed) || parsed <= 0)
+    throw new AppError(400, `${field} must be a positive integer`);
   return parsed;
 }
 
@@ -26,29 +27,72 @@ function booleanQuery(value: unknown) {
   throw new AppError(400, "unreadOnly must be true or false");
 }
 
-export async function index(request: Request, response: Response, next: NextFunction): Promise<void> {
+export async function index(
+  request: Request,
+  response: Response,
+  next: NextFunction,
+): Promise<void> {
   try {
-    const page = request.query.page === undefined ? 1 : positiveInteger(request.query.page, "page");
-    const limit = request.query.limit === undefined ? 20 : positiveInteger(request.query.limit, "limit");
+    const page =
+      request.query.page === undefined
+        ? 1
+        : positiveInteger(request.query.page, "page");
+    const limit =
+      request.query.limit === undefined
+        ? 20
+        : positiveInteger(request.query.limit, "limit");
     if (limit > 100) throw new AppError(400, "limit cannot exceed 100");
-    response.json(await getUserNotifications(userId(request), {
-      page,
-      limit,
-      unreadOnly: booleanQuery(request.query.unreadOnly),
-    }));
-  } catch (error) { next(error); }
+    response.json(
+      await getUserNotifications(userId(request), {
+        page,
+        limit,
+        unreadOnly: booleanQuery(request.query.unreadOnly),
+      }),
+    );
+  } catch (error) {
+    next(error);
+  }
 }
 
-export async function unreadCount(request: Request, response: Response, next: NextFunction): Promise<void> {
-  try { response.json({ count: await getUnreadCount(userId(request)) }); } catch (error) { next(error); }
-}
-
-export async function markRead(request: Request, response: Response, next: NextFunction): Promise<void> {
+export async function unreadCount(
+  request: Request,
+  response: Response,
+  next: NextFunction,
+): Promise<void> {
   try {
-    response.json({ notification: await markNotificationRead(positiveInteger(request.params.id, "notification id"), userId(request)) });
-  } catch (error) { next(error); }
+    response.json({ count: await getUnreadCount(userId(request)) });
+  } catch (error) {
+    next(error);
+  }
 }
 
-export async function markAllRead(request: Request, response: Response, next: NextFunction): Promise<void> {
-  try { response.json({ updatedCount: await markAllNotificationsRead(userId(request)) }); } catch (error) { next(error); }
+export async function markRead(
+  request: Request,
+  response: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    response.json({
+      notification: await markNotificationRead(
+        positiveInteger(request.params.id, "notification id"),
+        userId(request),
+      ),
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function markAllRead(
+  request: Request,
+  response: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    response.json({
+      updatedCount: await markAllNotificationsRead(userId(request)),
+    });
+  } catch (error) {
+    next(error);
+  }
 }

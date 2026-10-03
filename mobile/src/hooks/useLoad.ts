@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-export function useLoad<T>(loader: () => Promise<T>, _dependencies: unknown[] = []) {
+export function useLoad<T>(
+  loader: () => Promise<T>,
+  _dependencies: unknown[] = [],
+) {
   const loaderRef = useRef(loader);
   // Keep refresh actions pointed at the latest route-specific loader.
   // eslint-disable-next-line react-hooks/refs
@@ -17,7 +20,9 @@ export function useLoad<T>(loader: () => Promise<T>, _dependencies: unknown[] = 
       setData(await loaderRef.current());
       setError("");
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Unable to load data");
+      setError(
+        caught instanceof Error ? caught.message : "Unable to load data",
+      );
     } finally {
       setLoading(false);
       setRefreshing(false);
